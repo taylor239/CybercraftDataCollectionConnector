@@ -1,0 +1,5 @@
+{
+	"dbUserName": "dataCollector",
+	"dbPassword": "uBgiDDGhndviQeEZ",
+	"dbAddredd": "jdbc:mysql://localhost:3306"
+}
