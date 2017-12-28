@@ -34,6 +34,11 @@ public class ScreenshotGenerator implements Runnable
 		myListeners.add(newListener);
 	}
 	
+	public void stop()
+	{
+		running = false;
+	}
+	
 	@Override
 	public void run()
 	{

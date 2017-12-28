@@ -7,8 +7,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.sql.*;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.http.HttpEntity;
@@ -22,7 +25,6 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 
-import java.util.zip.GZIPInputStream;
 import java.util.zip.*;
 import java.io.*;
 
@@ -30,22 +32,64 @@ import com.datacollectorlocal.TestingConnectionSource;
 
 public class DataAggregator implements Runnable
 {
+	private static ConcurrentHashMap curAggregators = new ConcurrentHashMap();
 	private TestingConnectionSource myConnectionSource;
 	private boolean running = false;
 	private String server = "";
-	public DataAggregator(String serverAddr)
+	private long maxMessageSize = 750000;
+	private String myUsername = "";
+	private String myToken = "";
+	private Thread myThread = null;
+	
+	public static DataAggregator getInstance(String serverAddr, String username, String token)
 	{
+		if(!curAggregators.containsKey(serverAddr))
+		{
+			curAggregators.put(serverAddr, new ConcurrentHashMap());
+		}
+		ConcurrentHashMap tmpMap = (ConcurrentHashMap) curAggregators.get(serverAddr);
+		if(!tmpMap.containsKey(username))
+		{
+			tmpMap.put(username, new ConcurrentHashMap());
+		}
+		ConcurrentHashMap tmptmpMap = (ConcurrentHashMap) tmpMap.get(username);
+		if(tmptmpMap.containsKey(token))
+		{
+			DataAggregator myReturn = (DataAggregator) tmptmpMap.get(token);
+			if(myReturn.myThread == null || !myReturn.myThread.isAlive())
+			{
+				myReturn = new DataAggregator(serverAddr, username, token);
+				tmptmpMap.put(token, myReturn);
+			}
+			return myReturn;
+		}
+		else
+		{
+			DataAggregator myReturn = new DataAggregator(serverAddr, username, token);
+			tmptmpMap.put(token, myReturn);
+			return myReturn;
+		}
+	}
+	
+	private DataAggregator(String serverAddr, String username, String token)
+	{
+		myUsername = username;
+		myToken = token;
 		server = serverAddr;
 		myConnectionSource = new TestingConnectionSource();
-		Thread myThread = new Thread(this);
+		myThread = new Thread(this);
 		myThread.start();
 	}
 	
 	@Override
 	public void run()
 	{
-		String getLastSubmit = "";
-		String transferTimeInsert = "INSERT INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (CURRENT_TIMESTAMP)";
+		String tokenSelect = "SELECT * FROM `dataCollection`.`UploadToken` WHERE `username` = ?";
+		
+		String getLastSubmit = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 1";
+		String transferTimeInsertDefault = "INSERT INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (CURRENT_TIMESTAMP)";
+		String selectScreenshotSizeLimit = "SELECT OCTET_LENGTH(`screenshot`), `insertTimestamp` FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` >= ? ORDER BY `insertTimestamp` ASC";
+		String transferTimeInsert = "INSERT INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (?)";
 		String transferTimeSelect = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 2";
 		String userSelect = "SELECT * FROM `dataCollection`.`User` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String windowSelect = "SELECT * FROM `dataCollection`.`Window` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
@@ -57,8 +101,70 @@ public class DataAggregator implements Runnable
 		String mouseInputSelect = "SELECT * FROM `dataCollection`.`MouseInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String keyboardInputSelect = "SELECT * FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		running = true;
+		
+		String currentTimeQuery = "SELECT CURRENT_TIMESTAMP";
+		String initSelectScreenshotSizeLimit = "SELECT COUNT(*) FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
+		Timestamp maxMax = new Timestamp(0);
+		Connection preConnection = myConnectionSource.getDatabaseConnection();
+		//String myToken = "";
+		//try
+		//{
+		//	PreparedStatement userQuery = preConnection.prepareStatement(tokenSelect);
+		//	userQuery.setString(1, myUsername);
+		//	ResultSet myTokenResult = userQuery.executeQuery();
+		//	myTokenResult.next();
+		//	myToken = myTokenResult.getString("token");
+		//}
+		//catch(Exception e)
+		//{
+		//	e.printStackTrace();
+		//}
+		
+		try
+		{
+			PreparedStatement maxStatement = preConnection.prepareStatement(currentTimeQuery);
+			ResultSet maxResult = maxStatement.executeQuery();
+			maxResult.next();
+			maxMax = maxResult.getTimestamp(1);
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		
+		int currentDone = 0;
+		int totalToDo = 1;
+		
+		try
+		{
+			PreparedStatement lastSubmitStmt = preConnection.prepareStatement(getLastSubmit);
+			ResultSet lastSubmitResults = lastSubmitStmt.executeQuery();
+			Timestamp initTimestamp = null;
+			if(!lastSubmitResults.first())
+			{
+				initTimestamp = new Timestamp(0);
+			}
+			else
+			{
+				initTimestamp = lastSubmitResults.getTimestamp(1);
+			}
+			System.out.println(initTimestamp);
+			System.out.println(maxMax);
+			PreparedStatement maxStatement = preConnection.prepareStatement(initSelectScreenshotSizeLimit);
+			maxStatement.setTimestamp(2, initTimestamp);
+			maxStatement.setTimestamp(1, maxMax);
+			ResultSet maxResult = maxStatement.executeQuery();
+			maxResult.next();
+			totalToDo = maxResult.getInt(1);
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		
 		do
 		{
+			boolean shouldPause = true;
 			//try
 			//{
 			//	Thread.currentThread().sleep(5000);
@@ -70,8 +176,62 @@ public class DataAggregator implements Runnable
 			Connection myConnection = myConnectionSource.getDatabaseConnection();
 			try
 			{
-				PreparedStatement myStmt = myConnection.prepareStatement(transferTimeInsert);
-				myStmt.execute();
+				PreparedStatement lastSubmitStmt = myConnection.prepareStatement(getLastSubmit);
+				ResultSet lastSubmitResults = lastSubmitStmt.executeQuery();
+				Timestamp initTimestamp = null;
+				if(!lastSubmitResults.first())
+				{
+					initTimestamp = new Timestamp(0);
+				}
+				else
+				{
+					initTimestamp = lastSubmitResults.getTimestamp(1);
+				}
+				
+				PreparedStatement maxStatement = myConnection.prepareStatement(initSelectScreenshotSizeLimit);
+				maxStatement.setTimestamp(2, initTimestamp);
+				maxStatement.setTimestamp(1, maxMax);
+				ResultSet maxResult = maxStatement.executeQuery();
+				maxResult.next();
+				totalToDo = maxResult.getInt(1);
+				
+				//System.out.println("Checking images from after " + initTimestamp);
+				
+				PreparedStatement screenshotSizeStatement = myConnection.prepareStatement(selectScreenshotSizeLimit);
+				screenshotSizeStatement.setTimestamp(1, initTimestamp);
+				ResultSet screenshotSizeResults = screenshotSizeStatement.executeQuery();
+				long curSize = 0;
+				Timestamp maxTime = null;
+				while(screenshotSizeResults.next())
+				{
+					long entrySize = screenshotSizeResults.getLong(1);
+					if(curSize + entrySize <= maxMessageSize)
+					{
+						curSize += entrySize;
+						currentDone++;
+					}
+					else
+					{
+						maxTime = screenshotSizeResults.getTimestamp(2);
+						shouldPause = false;
+						break;
+					}
+				}
+				
+				PreparedStatement myStmt = null;
+				if(maxTime == null)
+				{
+					//System.out.println("Putting data up until now");
+					myStmt = myConnection.prepareStatement(transferTimeInsertDefault);
+					myStmt.execute();
+				}
+				else
+				{
+					//System.out.println("Putting data up until " + maxTime);
+					myStmt = myConnection.prepareStatement(transferTimeInsert);
+					myStmt.setTimestamp(1, maxTime);
+					myStmt.execute();
+				}
 				myStmt = myConnection.prepareStatement(transferTimeSelect);
 				ResultSet myResults = myStmt.executeQuery();
 				myResults.next();
@@ -81,12 +241,25 @@ public class DataAggregator implements Runnable
 				{
 					lastTimestamp = myResults.getTimestamp(1);
 				}
-				System.out.println("Getting entries from " + lastTimestamp + " to " + curTimestamp);
-				Thread.currentThread().sleep(5000);
+				
+				if(lastTimestamp.after(maxMax))
+				{
+					running = false;
+					System.out.println("Upload complete!");
+				}
+				
+				//System.out.println("Getting entries from " + lastTimestamp + " to " + curTimestamp);
+				if(shouldPause)
+				{
+					Thread.currentThread().sleep(5000);
+				}
 				
 				//Gson gson = new GsonBuilder().setPrettyPrinting().create();
 				Gson gson = new GsonBuilder().create();
 				HashMap totalObjects = new HashMap();
+				
+				totalObjects.put("username", myUsername);
+				totalObjects.put("token", myToken);
 				
 				myStmt = myConnection.prepareStatement(userSelect);
 				myStmt.setTimestamp(1, curTimestamp);
@@ -100,7 +273,7 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					userList.add(curMap);
@@ -119,7 +292,7 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					windowList.add(curMap);
@@ -138,7 +311,7 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					windowDetailsList.add(curMap);
@@ -157,7 +330,14 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						if(myResults.getMetaData().getColumnLabel(x).equals("screenshot"))
+						{
+							curMap.put(myResults.getMetaData().getColumnLabel(x), Base64.getEncoder().encodeToString(myResults.getBytes(x)));
+						}
+						else
+						{
+							curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
+						}
 					}
 					
 					screenshotList.add(curMap);
@@ -176,7 +356,7 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					processList.add(curMap);
@@ -195,7 +375,7 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					processArgsList.add(curMap);
@@ -214,7 +394,7 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					processAttributesList.add(curMap);
@@ -233,7 +413,7 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					mouseInputList.add(curMap);
@@ -252,15 +432,18 @@ public class DataAggregator implements Runnable
 					int colCount = myResults.getMetaData().getColumnCount();
 					for(int x=1; x<colCount + 1; x++)
 					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getObject(x));
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
 					}
 					
 					keyboardInputList.add(curMap);
 				}
 				totalObjects.put("KeyboardInput", keyboardInputList);
 				
+				totalObjects.put("totalToDo", totalToDo);
+				totalObjects.put("totalDone", currentDone);
 				
 				String totalJSON = gson.toJson(totalObjects);
+				//System.out.println("Total: " + totalJSON);
 				//Writer tmpFile = new FileWriter("/home/osboxes/Desktop/empty.txt");
 				//tmpFile.write(totalJSON);
 				//tmpFile.close();
@@ -295,7 +478,7 @@ public class DataAggregator implements Runnable
 				
 				//System.out.println(compressedString.substring(0, 25));
 				
-				System.out.println("Sending to: " + server);
+				//System.out.println("Sending to: " + server);
 				
 				HttpClient httpclient = HttpClients.createDefault();
 				HttpPost httppost = new HttpPost(server);
@@ -304,33 +487,39 @@ public class DataAggregator implements Runnable
 				httppost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 				HttpResponse response = httpclient.execute(httppost);
 				HttpEntity entity = response.getEntity();
+				System.out.println("Sent " + compressedString.length());
+				
+				/*byte[] buffer = new byte[1024];
+				int length = 0;
 				if(entity != null)
 				{
 					InputStream instream = entity.getContent();
-					//int len = 0;
-					//buffer = new byte[1024];
-					//output = new ByteArrayOutputStream();
-					//while((len = instream.read(buffer)) > 0)
-					//{
-					//	output.write(buffer, 0, length);
-					//}
+					int len = 0;
+					buffer = new byte[1024];
+					output = new ByteArrayOutputStream();
+					while((len = instream.read(buffer)) > 0)
+					{
+						output.write(buffer, 0, length);
+					}
 					instream.close();
-					//output.close();
+					output.close();
 					//System.out.println(new String(output.toByteArray()));
-				}
+				}*/
 					
 				//running=false;
 				
 				//System.out.println(totalJSON);
+				myConnection.close();
 			}
 			catch(Exception e)
 			{
 				e.printStackTrace();
+				return;
 			}
 			
 		} while(running);
 	}
-	
+	/*
 	private String toJSON(ArrayList input, String varName)
 	{
 		String myReturn = "{\n\t" + "\"" + varName + "\":" + "\n\t[";
@@ -376,6 +565,7 @@ public class DataAggregator implements Runnable
 		
 		return myReturn;
 	}
+	*/
 	
 	public void stop()
 	{

@@ -32,7 +32,11 @@ public class ActiveWindowMonitor
 		String[] tmpOutput = execShellCmd(WIN_ID_CMD);
 		String winId = tmpOutput[1];
 	    String winInfoMcd = windowInfoCmd(winId);
-	    String windowTitle = execShellCmd(winInfoMcd)[1];
+	    String windowTitle = "";
+	    if(winInfoMcd != null)
+	    {
+	    	windowTitle = execShellCmd(winInfoMcd)[1];
+	    }
 	    
 	    //System.out.println(windowTitle);
 	    
@@ -47,7 +51,12 @@ public class ActiveWindowMonitor
 	    	return null;
 	    }
 	    String[] windowClass = separateClass(tmpOutput[1]);
-	    String windowPID = execShellCmd(WIN_INFO_START + winId + WIN_PID_FROM_XID_END)[1].substring(24);
+	    String tmpStr = execShellCmd(WIN_INFO_START + winId + WIN_PID_FROM_XID_END)[1];
+	    String windowPID = "";
+	    if(tmpStr != null && !tmpStr.isEmpty() && tmpStr.length() > 23)
+	    {
+	    	windowPID = tmpStr.substring(24);
+	    }
 	    HashMap processInfo = separatePS(execShellCmd(WIN_PROCESS_INFO + windowPID)[1]);
 	    //System.out.println("process time: " + (System.currentTimeMillis() - initTime));
 	    //System.out.println("window title is: "+ windowTitle);
@@ -247,7 +256,7 @@ public class ActiveWindowMonitor
 						
 				}
 				
-				while(x < input.length() && input.charAt(x + 1) == ' ')
+				while(x + 1 < input.length() && input.charAt(x + 1) == ' ')
 				{
 					x++;
 				}

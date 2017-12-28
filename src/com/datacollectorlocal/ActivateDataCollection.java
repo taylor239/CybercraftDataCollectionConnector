@@ -39,8 +39,9 @@ public class ActivateDataCollection extends HttpServlet
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
+		System.out.println("Activating stuff");
 		ServletContext context = getServletContext();
-		String fullPath = context.getRealPath("/WEB-INF/test/parameters.json");
+		String fullPath = context.getRealPath("/WEB-INF/config/parameters.json");
 		String configJson = new String(Files.readAllBytes(Paths.get(fullPath)), "UTF-8");
 		Gson gson = new GsonBuilder().create();
 		HashMap config = gson.fromJson(configJson, HashMap.class);
@@ -57,15 +58,23 @@ public class ActivateDataCollection extends HttpServlet
 		{
 			currentCollector.stop();
 		}
-		if(currentAggregator != null)
+		//if(currentAggregator != null)
 		{
-			currentAggregator.stop();
+		//	currentAggregator.stop();
 		}
 		String username = request.getParameter("username");
+		String token = request.getParameter("token");
 		String serverAddr = request.getParameter("server");
-		currentCollector = new Start(username);
-		currentAggregator = new DataAggregator(serverAddr);
-		response.getWriter().append("Starting data collection for user " + username + " synching at " + serverAddr);
+		serverAddr = "http://revenge.cs.arizona.edu:80/DataCollectorServer/UploadData";
+		System.out.println("Got user: " + username + " with token " + token);
+		System.out.println("Sending to servr " + serverAddr);
+		//currentCollector = new Start(username);
+		currentAggregator = DataAggregator.getInstance(serverAddr, username, token);
+		response.getWriter().append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+		response.getWriter().append("<html>\n<head>\n</head>\n<body>\n");
+		response.getWriter().append("\nStarting data collection for user " + username + ":" + token + " syncing at " + serverAddr + "\n");
+		//response.getWriter().append("<meta http-equiv=\"refresh\" content=\"0; url=" + request.getParameter("redirect") + "\">\n</body>\n</html>");
+		response.getWriter().append("<meta http-equiv=\"refresh\" content=\"0; url=" + "http://revenge.cs.arizona.edu/RevEngE/monitorUpload.jsp?token=" + token + "\">\n</body>\n</html>");
 	}
 
 	/**

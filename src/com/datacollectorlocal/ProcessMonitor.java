@@ -136,7 +136,7 @@ public class ProcessMonitor implements Runnable
 						
 				}
 				
-				while(x < input.length() && input.charAt(x + 1) == ' ')
+				while(x + 1 < input.length() && input.charAt(x + 1) == ' ')
 				{
 					x++;
 				}
@@ -183,6 +183,11 @@ public class ProcessMonitor implements Runnable
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	public void stop()
+	{
+		running = false;
 	}
 	
 	public static void main(String[] args)
