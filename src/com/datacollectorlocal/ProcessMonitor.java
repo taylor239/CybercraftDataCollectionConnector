@@ -39,6 +39,7 @@ public class ProcessMonitor implements Runnable
 	        String[] outputArray = new String[2];
 	        if(finalExitValue != 0)
 	        {
+	        	System.out.println(cmd);
 	        	System.out.println("exit value: " + exitValue);
 	        }
 	        outputArray[0] = ((Integer)finalExitValue).toString();

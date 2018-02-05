@@ -65,11 +65,12 @@ public class ActivateDataCollection extends HttpServlet
 		String username = request.getParameter("username");
 		String token = request.getParameter("token");
 		String serverAddr = request.getParameter("server");
-		serverAddr = "http://revenge.cs.arizona.edu:80/DataCollectorServer/UploadData";
+		String event = request.getParameter("event");
+		serverAddr = "http://revenge.cs.arizona.edu:80/CatalystDataCollection/UploadData";
 		System.out.println("Got user: " + username + " with token " + token);
 		System.out.println("Sending to servr " + serverAddr);
 		//currentCollector = new Start(username);
-		currentAggregator = DataAggregator.getInstance(serverAddr, username, token);
+		currentAggregator = DataAggregator.getInstance(serverAddr, username, token, false, event);
 		response.getWriter().append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
 		response.getWriter().append("<html>\n<head>\n</head>\n<body>\n");
 		response.getWriter().append("\nStarting data collection for user " + username + ":" + token + " syncing at " + serverAddr + "\n");

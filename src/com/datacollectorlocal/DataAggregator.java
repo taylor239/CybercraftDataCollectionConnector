@@ -40,8 +40,11 @@ public class DataAggregator implements Runnable
 	private String myUsername = "";
 	private String myToken = "";
 	private Thread myThread = null;
+	private boolean daemon = false;
+	private String myEvent = "";
 	
-	public static DataAggregator getInstance(String serverAddr, String username, String token)
+	
+	public static DataAggregator getInstance(String serverAddr, String username, String token, boolean continuous, String event)
 	{
 		if(!curAggregators.containsKey(serverAddr))
 		{
@@ -58,23 +61,25 @@ public class DataAggregator implements Runnable
 			DataAggregator myReturn = (DataAggregator) tmptmpMap.get(token);
 			if(myReturn.myThread == null || !myReturn.myThread.isAlive())
 			{
-				myReturn = new DataAggregator(serverAddr, username, token);
+				myReturn = new DataAggregator(serverAddr, username, token, continuous, event);
 				tmptmpMap.put(token, myReturn);
 			}
 			return myReturn;
 		}
 		else
 		{
-			DataAggregator myReturn = new DataAggregator(serverAddr, username, token);
+			DataAggregator myReturn = new DataAggregator(serverAddr, username, token, continuous, event);
 			tmptmpMap.put(token, myReturn);
 			return myReturn;
 		}
 	}
 	
-	private DataAggregator(String serverAddr, String username, String token)
+	private DataAggregator(String serverAddr, String username, String token, boolean continuous, String event)
 	{
+		daemon = continuous;
 		myUsername = username;
 		myToken = token;
+		myEvent = event;
 		server = serverAddr;
 		myConnectionSource = new TestingConnectionSource();
 		myThread = new Thread(this);
@@ -242,7 +247,7 @@ public class DataAggregator implements Runnable
 					lastTimestamp = myResults.getTimestamp(1);
 				}
 				
-				if(lastTimestamp.after(maxMax))
+				if(lastTimestamp.after(maxMax) && !daemon)
 				{
 					running = false;
 					System.out.println("Upload complete!");
@@ -260,6 +265,7 @@ public class DataAggregator implements Runnable
 				
 				totalObjects.put("username", myUsername);
 				totalObjects.put("token", myToken);
+				totalObjects.put("event", myEvent);
 				
 				myStmt = myConnection.prepareStatement(userSelect);
 				myStmt.setTimestamp(1, curTimestamp);
