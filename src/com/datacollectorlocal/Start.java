@@ -229,7 +229,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			System.out.println("Warning: Not running from JAR");
 		}
-		else if(false)
+		else
 		{
 			try
 			{
