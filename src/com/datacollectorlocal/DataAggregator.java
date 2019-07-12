@@ -105,6 +105,8 @@ public class DataAggregator implements Runnable
 		String processAttributesSelect = "SELECT * FROM `dataCollection`.`ProcessAttributes` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String mouseInputSelect = "SELECT * FROM `dataCollection`.`MouseInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String keyboardInputSelect = "SELECT * FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
+		String taskSelect = "SELECT * FROM `dataCollection`.`Task` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
+		String taskEventSelect = "SELECT * FROM `dataCollection`.`TaskEvent` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		running = true;
 		
 		String currentTimeQuery = "SELECT CURRENT_TIMESTAMP";
@@ -444,6 +446,44 @@ public class DataAggregator implements Runnable
 					keyboardInputList.add(curMap);
 				}
 				totalObjects.put("KeyboardInput", keyboardInputList);
+				
+				myStmt = myConnection.prepareStatement(taskSelect);
+				myStmt.setTimestamp(1, curTimestamp);
+				myStmt.setTimestamp(2, lastTimestamp);
+				myResults = myStmt.executeQuery();
+				ArrayList taskList = new ArrayList();
+				while(myResults.next())
+				{
+					HashMap curMap = new HashMap();
+					
+					int colCount = myResults.getMetaData().getColumnCount();
+					for(int x=1; x<colCount + 1; x++)
+					{
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
+					}
+					
+					taskList.add(curMap);
+				}
+				totalObjects.put("Task", taskList);
+				
+				myStmt = myConnection.prepareStatement(taskEventSelect);
+				myStmt.setTimestamp(1, curTimestamp);
+				myStmt.setTimestamp(2, lastTimestamp);
+				myResults = myStmt.executeQuery();
+				ArrayList taskEventList = new ArrayList();
+				while(myResults.next())
+				{
+					HashMap curMap = new HashMap();
+					
+					int colCount = myResults.getMetaData().getColumnCount();
+					for(int x=1; x<colCount + 1; x++)
+					{
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
+					}
+					
+					taskEventList.add(curMap);
+				}
+				totalObjects.put("TaskEvent", taskEventList);
 				
 				totalObjects.put("totalToDo", totalToDo);
 				totalObjects.put("totalDone", currentDone);

@@ -103,6 +103,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private ProcessMonitor myProcessMonitor;
 	private boolean running = false;
 	private TestingConnectionSource connectionSource = new TestingConnectionSource();
+	private static TaskInputGUI myTaskGUI;
 	
 	private DataAggregator curAggregator = null;
 	
@@ -124,8 +125,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private static String[] programArgs = new String[0];
 	private static boolean hasBeenLaunched = false;
 	
-	public Start(String user, String event)
+	public Start(String user, String event, int screenshot)
 	{
+		screenshotTimeout = screenshot;
+		
 		sessionToken = UUID.randomUUID().toString();
 		userName = user;
 		if(event != null)
@@ -320,6 +323,15 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				myReturn.put("event", args[x+1]);
 				x++;
 			}
+			else if(args[x].equals("-taskgui"))
+			{
+				myReturn.put("taskgui", args[x]);
+			}
+			else if(args[x].equals("-screenshot"))
+			{
+				myReturn.put("screenshot", args[x+1]);
+				x++;
+			}
 			else if(args[x].equals("-continuous"))
 			{
 				myReturn.put("continuous", true);
@@ -329,6 +341,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				x++;
 			}
 		}
+		
 		return myReturn;
 	}
 
@@ -346,7 +359,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		hasBeenLaunched = true;
 		programArgs = args;
 		HashMap configuration = configure(args);
-		update();
+		//update();
 		//if(true)
 		//	return;
 		String userToStart = "default";
@@ -365,11 +378,24 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			eventToStart = (String) configuration.get("event");
 		}
 		
-		myStart = new Start(userToStart, eventToStart);
+		int screenshot = 10000;
+		if(configuration.containsKey("screenshot"))
+		{
+			screenshot = new Integer((String) configuration.get("screenshot"));
+		}
+		
+		myStart = new Start(userToStart, eventToStart, screenshot);
 		
 		if(configuration.containsKey("continuous"))
 		{
 			DataAggregator currentAggregator = DataAggregator.getInstance((String)configuration.get("collectionServer"), (String)configuration.get("user"), (String)configuration.get("token"), true, eventToStart);
+		}
+		
+		if(configuration.containsKey("taskgui"))
+		{
+			myTaskGUI = new TaskInputGUI(eventToStart, userToStart, myStart.sessionToken);
+			myTaskGUI.setSize(400,200);
+			myTaskGUI.setVisible(true);
 		}
 		
 		while(myStart.running)
@@ -1422,7 +1448,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			}
 			if(new Random().nextInt() % 20 == 0)
 			{
-				update();
+				//update();
 				System.out.println("Running in session " + sessionToken);
 			}
 			System.gc();
