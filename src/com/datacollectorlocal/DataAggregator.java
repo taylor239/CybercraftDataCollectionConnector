@@ -524,7 +524,7 @@ public class DataAggregator implements Runnable
 				
 				//System.out.println(compressedString.substring(0, 25));
 				
-				//System.out.println("Sending to: " + server);
+				System.out.println("Sending to: " + server);
 				
 				HttpClient httpclient = HttpClients.createDefault();
 				HttpPost httppost = new HttpPost(server);

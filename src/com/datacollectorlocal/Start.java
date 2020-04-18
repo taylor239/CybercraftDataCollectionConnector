@@ -84,6 +84,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	boolean verbose = false;
 	
 	private Thread myThread;
+	private static ArrayList windowsToClose = new ArrayList();
 	private ActiveWindowMonitor myMonitor = new ActiveWindowMonitor();
 	private String windowID = "";
 	private String windowName = "";
@@ -396,6 +397,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			myTaskGUI = new TaskInputGUI(eventToStart, userToStart, myStart.sessionToken);
 			myTaskGUI.setSize(400,200);
 			myTaskGUI.setVisible(true);
+			windowsToClose.add(myTaskGUI);
 		}
 		
 		while(myStart.running)
@@ -433,6 +435,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			currentWindowData = newWindow;
 			if(verbose)
 			System.out.println("New window");
+			//myGenerator.takeScreenshot();
 			return true;
 		}
 		return false;
@@ -671,6 +674,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					PreparedStatement eventStatement = myConnection.prepareStatement(eventInsert);
 					eventStatement.setString(1, eventName);
 					eventStatement.execute();
+					eventStatement.close();
 					
 					String userInsert = "INSERT IGNORE INTO `dataCollection`.`User` (`username`, `session`, `event`) VALUES ";
 					String userRow = "(?,?,?)";
@@ -680,6 +684,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					userStatement.setString(2, sessionToken);
 					userStatement.setString(3, eventName);
 					userStatement.execute();
+					userStatement.close();
 					
 					
 					if(verbose)
@@ -935,14 +940,19 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						}
 						
 						processStatement.execute();
+						processStatement.close();
 						processAttStatement.execute();
+						processAttStatement.close();
 						windowStatement.execute();
+						windowStatement.close();
 						windowDetailStatement.execute();
+						windowDetailStatement.close();
 						if(hasArgs)
 						{
 							//if(verbose)
 							//System.out.println(processArgStatement);
 							processArgStatement.execute();
+							processArgStatement.close();
 						}
 						
 					}
@@ -1160,12 +1170,15 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						//	System.out.println(processAttStatement);
 						
 						processStatement.execute();
+						processStatement.close();
 						processAttStatement.execute();
+						processAttStatement.close();
 						if(hasArgs)
 						{
 							//if(verbose)
 							//	System.out.println(processArgStatement);
 							processArgStatement.execute();
+							processArgStatement.close();
 						}
 						
 					}
@@ -1264,6 +1277,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						if(clickToInsert > 0)
 						{
 							mouseClickStatement.execute();
+							mouseClickStatement.close();
 						}
 					}
 					
@@ -1333,6 +1347,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						if(screenshotsToInsert > 0)
 						{
 							screenshotStatement.execute();
+							screenshotStatement.close();
 						}
 					}
 					
@@ -1428,6 +1443,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						if(keyToInsert > 0)
 						{
 							keyPressStatement.execute();
+							keyPressStatement.close();
 							//System.out.println("Inserting " + allTyped);
 							//System.out.println(keyPressStatement);
 						}
@@ -1437,6 +1453,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					count = 0;
 					
 					myConnection.commit();
+					myConnection.close();
 				}
 				Thread.sleep(1000);
 				//if(verbose)
@@ -1485,6 +1502,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public ArrayList getInvisibleComponents() {
+		return windowsToClose;
 	}
 
 }

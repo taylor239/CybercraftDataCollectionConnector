@@ -66,7 +66,12 @@ public class ActivateDataCollection extends HttpServlet
 		String token = request.getParameter("token");
 		String serverAddr = request.getParameter("server");
 		String event = request.getParameter("event");
-		serverAddr = "http://revenge.cs.arizona.edu:80/CatalystDataCollection/UploadData";
+		String redirAddr = request.getParameter("redirect");
+		if(redirAddr == null || redirAddr.equals(""))
+		{
+			redirAddr = "http://revenge.cs.arizona.edu/RevEngE/monitorUpload.jsp";
+		}
+		//serverAddr = "http://revenge.cs.arizona.edu:80/CatalystDataCollection/UploadData";
 		System.out.println("Got user: " + username + " with token " + token);
 		System.out.println("Sending to servr " + serverAddr);
 		//currentCollector = new Start(username);
@@ -75,7 +80,7 @@ public class ActivateDataCollection extends HttpServlet
 		response.getWriter().append("<html>\n<head>\n</head>\n<body>\n");
 		response.getWriter().append("\nStarting data collection for user " + username + ":" + token + " syncing at " + serverAddr + "\n");
 		//response.getWriter().append("<meta http-equiv=\"refresh\" content=\"0; url=" + request.getParameter("redirect") + "\">\n</body>\n</html>");
-		response.getWriter().append("<meta http-equiv=\"refresh\" content=\"0; url=" + "http://revenge.cs.arizona.edu/RevEngE/monitorUpload.jsp?token=" + token + "\">\n</body>\n</html>");
+		response.getWriter().append("<meta http-equiv=\"refresh\" content=\"0; url=" + redirAddr + "?token=" + token + "\">\n</body>\n</html>");
 	}
 
 	/**
