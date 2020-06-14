@@ -27,10 +27,19 @@ public class ActiveWindowMonitor
 	
 	public HashMap getTopWindow()
 	{
+		//System.out.println("Getting window info");
 		HashMap myReturn = new HashMap();
 		long initTime = System.currentTimeMillis();
 		String[] tmpOutput = execShellCmd(WIN_ID_CMD);
+		//for(int x=0; x<tmpOutput.length; x++)
+		{
+			//System.out.println(tmpOutput[x]);
+		}
 		String winId = tmpOutput[1];
+		if(winId.equals("0x0") || winId.length() <= 8)
+		{
+			winId = "0x1000010";
+		}
 	    String winInfoMcd = windowInfoCmd(winId);
 	    String windowTitle = "";
 	    if(winInfoMcd != null)
@@ -58,15 +67,15 @@ public class ActiveWindowMonitor
 	    	windowPID = tmpStr.substring(24);
 	    }
 	    HashMap processInfo = separatePS(execShellCmd(WIN_PROCESS_INFO + windowPID)[1]);
-	    //System.out.println("process time: " + (System.currentTimeMillis() - initTime));
-	    //System.out.println("window title is: "+ windowTitle);
-	    //System.out.println("window info is: " + winInfoMcd);
-	    //System.out.println("window id: "+ winId);
-	    //System.out.println("window first class: " + windowClass[0]);
-	    //System.out.println("window second class: " + windowClass[1]);
-	    //System.out.println("window pid: " + windowPID);
-	    //System.out.println("window process info: " + processInfo);
-	    
+	    /*System.out.println("process time: " + (System.currentTimeMillis() - initTime));
+	    System.out.println("window title is: "+ windowTitle);
+	    System.out.println("window info is: " + winInfoMcd);
+	    System.out.println("window id: "+ winId);
+	    System.out.println("window first class: " + windowClass[0]);
+	    System.out.println("window second class: " + windowClass[1]);
+	    System.out.println("window pid: " + windowPID);
+	    System.out.println("window process info: " + processInfo);
+	    */
 	    myReturn.put("WindowID", winId);
 	    myReturn.put("WindowTitle", windowTitle);
 	    myReturn.put("WindowFirstClass", windowClass[0]);
@@ -319,6 +328,7 @@ public class ActiveWindowMonitor
 		return myReturn;
 	}
 	public synchronized String[] execShellCmd(String cmd){
+		//System.out.println("Executing " + cmd);
 	    try {  
 
 	        Runtime runtime = Runtime.getRuntime();  
@@ -328,6 +338,7 @@ public class ActiveWindowMonitor
 	        String[] outputArray = new String[2];
 	        if(finalExitValue != 0)
 	        {
+	        	System.out.println(cmd);
 	        	System.out.println("exit value: " + exitValue);
 	        }
 	        outputArray[0] = ((Integer)finalExitValue).toString();
@@ -337,6 +348,7 @@ public class ActiveWindowMonitor
 	        while ((line = buf.readLine()) != null) {
 	            output = line;
 	        }
+	        //System.out.println("Output: " + output);
 	        outputArray[1] = output;
 	        return outputArray;
 	    } catch (Exception e) {  

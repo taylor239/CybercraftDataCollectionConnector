@@ -65,6 +65,10 @@ public class ActivateDataCollection extends HttpServlet
 		String username = request.getParameter("username");
 		String token = request.getParameter("token");
 		String serverAddr = request.getParameter("server");
+		if(serverAddr == null || serverAddr.equals(""))
+		{
+			
+		}
 		String event = request.getParameter("event");
 		String redirAddr = request.getParameter("redirect");
 		if(redirAddr == null || redirAddr.equals(""))
@@ -72,9 +76,10 @@ public class ActivateDataCollection extends HttpServlet
 			redirAddr = "http://revenge.cs.arizona.edu/RevEngE/monitorUpload.jsp";
 		}
 		//serverAddr = "http://revenge.cs.arizona.edu:80/CatalystDataCollection/UploadData";
-		System.out.println("Got user: " + username + " with token " + token);
-		System.out.println("Sending to servr " + serverAddr);
+		System.err.println("Got user: " + username + " with token " + token);
+		System.err.println("Sending to servr " + serverAddr);
 		//currentCollector = new Start(username);
+		//System.err.println("Starting data aggregator with " + serverAddr + ", " + username + ", " + token);
 		currentAggregator = DataAggregator.getInstance(serverAddr, username, token, false, event);
 		response.getWriter().append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
 		response.getWriter().append("<html>\n<head>\n</head>\n<body>\n");

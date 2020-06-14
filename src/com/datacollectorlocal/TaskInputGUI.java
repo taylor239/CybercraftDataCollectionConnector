@@ -26,7 +26,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 {
 	private GridBagConstraints myConstraints;
 	private JTextField taskField;
-	private JButton addButton;
+	private JButton addButton, pauseButton;
 	private TestingConnectionSource connectionSource = new TestingConnectionSource();
 	private String eventName;
 	private String userName;
@@ -38,9 +38,12 @@ public class TaskInputGUI extends JFrame implements ActionListener
 	private int startingRow = 0;
 	private int startingCol = 0;
 	private ArrayList tableComponents;
+	private ArrayList pauseListeners;
 	
 	public TaskInputGUI(String event, String user, String sess)
 	{
+		pauseListeners = new ArrayList();
+		
 		eventName = event;
 		userName = user;
 		session = sess;
@@ -62,6 +65,14 @@ public class TaskInputGUI extends JFrame implements ActionListener
 		myConstraints.gridx = 0;
 		
 		getContentPane().setLayout(new GridBagLayout());
+		
+		myConstraints.gridwidth = 3;
+		pauseButton = new JButton("Pause");
+		pauseButton.addActionListener(this);
+		getContentPane().add(pauseButton, myConstraints);
+		myConstraints.gridwidth = 1;
+		myConstraints.gridy++;
+		
 		getContentPane().add(new JLabel("Task:"), myConstraints);
 		myConstraints.gridx++;
 		taskField = new JTextField(20);
@@ -75,6 +86,11 @@ public class TaskInputGUI extends JFrame implements ActionListener
 		startingCol = 0;
 		
 		refreshView();
+	}
+	
+	public void addPauseListener(PauseListener myListener)
+	{
+		pauseListeners.add(myListener);
 	}
 	
 	public void refreshView()
@@ -220,7 +236,31 @@ public class TaskInputGUI extends JFrame implements ActionListener
 	public void actionPerformed(ActionEvent e)
 	{
 		Timestamp curTimestamp = new Timestamp(new Date().getTime());
-		if(e.getSource().equals(addButton))
+		
+		if(e.getSource().equals(pauseButton))
+		{
+			for(int x=0; x<pauseListeners.size(); x++)
+			{
+				PauseListener curListener = (PauseListener) pauseListeners.get(x);
+				if(pauseButton.getText().equals("Pause"))
+				{
+					curListener.pause();
+				}
+				else
+				{
+					curListener.resume();
+				}
+			}
+			if(pauseButton.getText().equals("Pause"))
+			{
+				pauseButton.setText("Resume");
+			}
+			else
+			{
+				pauseButton.setText("Pause");
+			}
+		}
+		else if(e.getSource().equals(addButton))
 		{
 			String curTask = taskField.getText();
 			taskField.setText("");

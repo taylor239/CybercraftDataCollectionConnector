@@ -79,7 +79,7 @@ import com.google.gson.Gson;
 
 
 
-public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener
+public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener, PauseListener
 {
 	boolean verbose = false;
 	
@@ -105,6 +105,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private boolean running = false;
 	private TestingConnectionSource connectionSource = new TestingConnectionSource();
 	private static TaskInputGUI myTaskGUI;
+	private boolean paused = false;
 	
 	private DataAggregator curAggregator = null;
 	
@@ -396,6 +397,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			myTaskGUI = new TaskInputGUI(eventToStart, userToStart, myStart.sessionToken);
 			myTaskGUI.setSize(400,200);
+			myTaskGUI.addPauseListener(myStart);
 			myTaskGUI.setVisible(true);
 			windowsToClose.add(myTaskGUI);
 		}
@@ -446,6 +448,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeMouseClicked(NativeMouseEvent arg0)
 	{
+		if(paused)
+		{
+			return;
+		}
 		if(!recordClick)
 		{
 			return;
@@ -467,6 +473,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeMousePressed(NativeMouseEvent arg0)
 	{
+		if(paused)
+		{
+			return;
+		}
 		//if(verbose)
 		//System.out.println("Mouse Pressed: " + arg0.getX() + ", " + arg0.getY());
 		checkNew(myMonitor.getTopWindow());
@@ -484,6 +494,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeMouseReleased(NativeMouseEvent arg0)
 	{
+		if(paused)
+		{
+			return;
+		}
 		//if(verbose)
 		//System.out.println("Mouse Released: " + arg0.getX() + ", " + arg0.getY());
 		checkNew(myMonitor.getTopWindow());
@@ -503,6 +517,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeMouseDragged(NativeMouseEvent arg0)
 	{
+		if(paused)
+		{
+			return;
+		}
 		if(!useDragged)
 		{
 			return;
@@ -532,7 +550,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeKeyPressed(NativeKeyEvent arg0)
 	{
-		
+		if(paused)
+		{
+			return;
+		}
 		checkNew(myMonitor.getTopWindow());
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "press");
@@ -551,7 +572,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeKeyReleased(NativeKeyEvent arg0)
 	{
-		
+		if(paused)
+		{
+			return;
+		}
 		checkNew(myMonitor.getTopWindow());
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "release");
@@ -570,6 +594,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public void nativeKeyTyped(NativeKeyEvent arg0)
 	{
+		if(paused)
+		{
+			return;
+		}
 		//System.out.println("" + arg0.getWhen() + ":" + arg0.getKeyChar());
 		//System.out.println(Short.MAX_VALUE * 2);
 		//if(true)
@@ -591,6 +619,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	public void monitorProcesses(ArrayList processes)
 	{
+		if(paused)
+		{
+			return;
+		}
 		for(int x=0; x<processes.size(); x++)
 		{
 			((HashMap)processes.get(x)).put("username", userName);
@@ -1477,6 +1509,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public void getScreenshotEvent(Date timeTaken, Image screenshot)
 	{
+		if(paused)
+		{
+			return;
+		}
 		Object[] myPair = new Object[3];
 		
 		try
@@ -1507,6 +1543,19 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public ArrayList getInvisibleComponents() {
 		return windowsToClose;
+	}
+
+	@Override
+	public void pause()
+	{
+		paused = true;
+	}
+
+	@Override
+	public void resume()
+	{
+		paused = false;
+		checkNew(myMonitor.getTopWindow());
 	}
 
 }

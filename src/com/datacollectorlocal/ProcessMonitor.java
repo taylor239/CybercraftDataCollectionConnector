@@ -163,7 +163,12 @@ public class ProcessMonitor implements Runnable
 		running = true;
 		while(running)
 		{
+			//System.out.println("Getting window info");
 			String[] psOutput = execShellCmd(WIN_PROCESS_INFO);
+			//for(int x=0; x<psOutput.length; x++)
+			//{
+				//System.out.println(psOutput[x]);
+			//}
 			Scanner myScanner = new Scanner(psOutput[1]);
 			ArrayList output = new ArrayList();
 			while(myScanner.hasNextLine())
