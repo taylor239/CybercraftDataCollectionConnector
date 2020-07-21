@@ -24,6 +24,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 
 import java.util.zip.*;
 import java.io.*;
@@ -39,12 +40,13 @@ public class DataAggregator implements Runnable
 	private long maxMessageSize = 750000;
 	private String myUsername = "";
 	private String myToken = "";
+	private String myAdminEmail = "";
 	private Thread myThread = null;
 	private boolean daemon = false;
 	private String myEvent = "";
 	
 	
-	public static DataAggregator getInstance(String serverAddr, String username, String token, boolean continuous, String event)
+	public static DataAggregator getInstance(String serverAddr, String username, String token, boolean continuous, String event, String admin)
 	{
 		if(!curAggregators.containsKey(serverAddr))
 		{
@@ -61,26 +63,27 @@ public class DataAggregator implements Runnable
 			DataAggregator myReturn = (DataAggregator) tmptmpMap.get(token);
 			if(myReturn.myThread == null || !myReturn.myThread.isAlive())
 			{
-				myReturn = new DataAggregator(serverAddr, username, token, continuous, event);
+				myReturn = new DataAggregator(serverAddr, username, token, continuous, event, admin);
 				tmptmpMap.put(token, myReturn);
 			}
 			return myReturn;
 		}
 		else
 		{
-			DataAggregator myReturn = new DataAggregator(serverAddr, username, token, continuous, event);
+			DataAggregator myReturn = new DataAggregator(serverAddr, username, token, continuous, event, admin);
 			tmptmpMap.put(token, myReturn);
 			return myReturn;
 		}
 	}
 	
-	private DataAggregator(String serverAddr, String username, String token, boolean continuous, String event)
+	private DataAggregator(String serverAddr, String username, String token, boolean continuous, String event, String admin)
 	{
 		daemon = continuous;
 		myUsername = username;
 		myToken = token;
 		myEvent = event;
 		server = serverAddr;
+		myAdminEmail = admin;
 		myConnectionSource = new TestingConnectionSource();
 		myThread = new Thread(this);
 		myThread.start();
@@ -92,9 +95,10 @@ public class DataAggregator implements Runnable
 		String tokenSelect = "SELECT * FROM `dataCollection`.`UploadToken` WHERE `username` = ?";
 		
 		String getLastSubmit = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 1";
-		String transferTimeInsertDefault = "INSERT INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (CURRENT_TIMESTAMP)";
+		String transferTimeInsertDefault = "INSERT IGNORE INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (CURRENT_TIMESTAMP(3))";
 		String selectScreenshotSizeLimit = "SELECT OCTET_LENGTH(`screenshot`), `insertTimestamp` FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` >= ? ORDER BY `insertTimestamp` ASC";
-		String transferTimeInsert = "INSERT INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (?)";
+		String transferTimeInsert = "INSERT IGNORE INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (?)";
+		String currentTimeSelect = "SELECT CURRENT_TIMESTAMP(3)";
 		String transferTimeSelect = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 2";
 		String userSelect = "SELECT * FROM `dataCollection`.`User` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String windowSelect = "SELECT * FROM `dataCollection`.`Window` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
@@ -109,7 +113,7 @@ public class DataAggregator implements Runnable
 		String taskEventSelect = "SELECT * FROM `dataCollection`.`TaskEvent` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		running = true;
 		
-		String currentTimeQuery = "SELECT CURRENT_TIMESTAMP";
+		String currentTimeQuery = "SELECT CURRENT_TIMESTAMP(3)";
 		String initSelectScreenshotSizeLimit = "SELECT COUNT(*) FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		Timestamp maxMax = new Timestamp(0);
 		Connection preConnection = myConnectionSource.getDatabaseConnection();
@@ -149,14 +153,15 @@ public class DataAggregator implements Runnable
 			Timestamp initTimestamp = null;
 			if(!lastSubmitResults.first())
 			{
+				System.out.println("No last submit");
 				initTimestamp = new Timestamp(0);
 			}
 			else
 			{
 				initTimestamp = lastSubmitResults.getTimestamp(1);
 			}
-			System.out.println(initTimestamp);
-			System.out.println(maxMax);
+			System.out.println("From: " + initTimestamp);
+			System.out.println("To max " + maxMax);
 			PreparedStatement maxStatement = preConnection.prepareStatement(initSelectScreenshotSizeLimit);
 			maxStatement.setTimestamp(2, initTimestamp);
 			maxStatement.setTimestamp(1, maxMax);
@@ -228,22 +233,32 @@ public class DataAggregator implements Runnable
 				PreparedStatement myStmt = null;
 				if(maxTime == null)
 				{
+					myStmt = myConnection.prepareStatement(transferTimeSelect);
+					ResultSet myResults = myStmt.executeQuery();
+					
+					//maxTime = new Timestamp(System.currentTimeMillis());
+					if(myResults.next())
+					{
+						maxTime = myResults.getTimestamp(1);
+					}
 					//System.out.println("Putting data up until now");
-					myStmt = myConnection.prepareStatement(transferTimeInsertDefault);
-					myStmt.execute();
+					//myStmt = myConnection.prepareStatement(transferTimeInsertDefault);
+					//myStmt.execute();
 				}
 				else
 				{
 					//System.out.println("Putting data up until " + maxTime);
-					myStmt = myConnection.prepareStatement(transferTimeInsert);
-					myStmt.setTimestamp(1, maxTime);
-					myStmt.execute();
+					//myStmt = myConnection.prepareStatement(transferTimeInsert);
+					//myStmt.setTimestamp(1, maxTime);
+					//myStmt.execute();
 				}
 				myStmt = myConnection.prepareStatement(transferTimeSelect);
 				ResultSet myResults = myStmt.executeQuery();
-				myResults.next();
-				Timestamp curTimestamp = myResults.getTimestamp(1);
+				//myResults.next();
+				Timestamp curTimestamp = maxTime;
 				Timestamp lastTimestamp = new Timestamp(0);
+				//Timestamp curTimestamp = myResults.getTimestamp(1);
+				//Timestamp lastTimestamp = new Timestamp(0);
 				if(myResults.next())
 				{
 					lastTimestamp = myResults.getTimestamp(1);
@@ -253,6 +268,10 @@ public class DataAggregator implements Runnable
 				{
 					running = false;
 					System.out.println("Upload complete!");
+				}
+				else if(lastTimestamp.after(maxMax))
+				{
+					System.out.println("Finished sync, looping for more");
 				}
 				
 				//System.out.println("Getting entries from " + lastTimestamp + " to " + curTimestamp);
@@ -268,6 +287,7 @@ public class DataAggregator implements Runnable
 				totalObjects.put("username", myUsername);
 				totalObjects.put("token", myToken);
 				totalObjects.put("event", myEvent);
+				totalObjects.put("admin", myAdminEmail);
 				
 				myStmt = myConnection.prepareStatement(userSelect);
 				myStmt.setTimestamp(1, curTimestamp);
@@ -287,6 +307,7 @@ public class DataAggregator implements Runnable
 					userList.add(curMap);
 				}
 				totalObjects.put("User", userList);
+				
 				
 				myStmt = myConnection.prepareStatement(windowSelect);
 				myStmt.setTimestamp(1, curTimestamp);
@@ -534,6 +555,31 @@ public class DataAggregator implements Runnable
 				HttpResponse response = httpclient.execute(httppost);
 				HttpEntity entity = response.getEntity();
 				System.out.println("Sent " + compressedString.length());
+				
+				String responseString = EntityUtils.toString(entity, "UTF-8");
+				if(responseString.equals("{\"result\":\"ok\"}"))
+				{
+					System.out.println("All OK:");
+					System.out.println(responseString);
+					if(maxTime == null)
+					{
+						//System.out.println("Putting data up until now");
+						myStmt = myConnection.prepareStatement(transferTimeInsertDefault);
+						myStmt.execute();
+					}
+					else
+					{
+						//System.out.println("Putting data up until " + maxTime);
+						myStmt = myConnection.prepareStatement(transferTimeInsert);
+						myStmt.setTimestamp(1, maxTime);
+						myStmt.execute();
+					}
+				}
+				else
+				{
+					System.out.println("Not OK:");
+					System.out.println(responseString);
+				}
 				
 				/*byte[] buffer = new byte[1024];
 				int length = 0;

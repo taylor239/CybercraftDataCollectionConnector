@@ -70,6 +70,7 @@ public class ActivateDataCollection extends HttpServlet
 			
 		}
 		String event = request.getParameter("event");
+		String admin = request.getParameter("admin");
 		String redirAddr = request.getParameter("redirect");
 		if(redirAddr == null || redirAddr.equals(""))
 		{
@@ -80,7 +81,7 @@ public class ActivateDataCollection extends HttpServlet
 		System.err.println("Sending to servr " + serverAddr);
 		//currentCollector = new Start(username);
 		//System.err.println("Starting data aggregator with " + serverAddr + ", " + username + ", " + token);
-		currentAggregator = DataAggregator.getInstance(serverAddr, username, token, false, event);
+		currentAggregator = DataAggregator.getInstance(serverAddr, username, token, false, event, admin);
 		response.getWriter().append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
 		response.getWriter().append("<html>\n<head>\n</head>\n<body>\n");
 		response.getWriter().append("\nStarting data collection for user " + username + ":" + token + " syncing at " + serverAddr + "\n");

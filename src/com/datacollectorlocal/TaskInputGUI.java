@@ -29,7 +29,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 	private JButton addButton, pauseButton;
 	private TestingConnectionSource connectionSource = new TestingConnectionSource();
 	private String eventName;
-	private String userName;
+	private String userName, adminEmail;
 	private String session;
 	private ConcurrentHashMap endMap;
 	private ConcurrentHashMap pauseMap;
@@ -40,12 +40,13 @@ public class TaskInputGUI extends JFrame implements ActionListener
 	private ArrayList tableComponents;
 	private ArrayList pauseListeners;
 	
-	public TaskInputGUI(String event, String user, String sess)
+	public TaskInputGUI(String event, String user, String admin, String sess)
 	{
 		pauseListeners = new ArrayList();
 		
 		eventName = event;
 		userName = user;
+		adminEmail = admin;
 		session = sess;
 		
 		tableComponents = new ArrayList();
@@ -124,16 +125,18 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					"INNER JOIN (\n" + 
 					"    SELECT MAX(`TaskEvent`.`eventTime`) AS `eventTimeMax`\n" + 
 					"    FROM `dataCollection`.`Task`\n" + 
-					"    INNER JOIN `dataCollection`.`TaskEvent` ON `Task`.`event` = `TaskEvent`.`event` AND `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`taskName` = `TaskEvent`.`taskName` AND `Task`.`startTimestamp` = `TaskEvent`.`startTimestamp` GROUP BY `Task`.`startTimestamp`, `Task`.`username`, `Task`.`session`, `Task`.`taskName`, `Task`.`startTimestamp`\n" + 
+					"    INNER JOIN `dataCollection`.`TaskEvent` ON `Task`.`event` = `TaskEvent`.`event` AND `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`taskName` = `TaskEvent`.`taskName` AND `Task`.`startTimestamp` = `TaskEvent`.`startTimestamp` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` GROUP BY `Task`.`startTimestamp`, `Task`.`username`, `Task`.`session`, `Task`.`taskName`, `Task`.`startTimestamp`, `Task`.`adminEmail`\n" + 
 					") b\n" + 
 					"ON a.`eventTime` = b.`eventTimeMax`\n" + 
 					") d\n" + 
-					"ON c.`taskName` = d.`taskName` AND c.`event` = d.`event` AND c.`username` = d.`username` AND c.`session` = d.`session` AND c.`startTimestamp` = d.`startTimestamp`" +
-					"WHERE c.`username` = ? AND c.`event` = ? AND c.`completion` = 0 ORDER BY c.`startTimestamp` ASC";
+					"ON c.`taskName` = d.`taskName` AND c.`event` = d.`event` AND c.`adminEmail` = d.`adminEmail` AND c.`username` = d.`username` AND c.`session` = d.`session` AND c.`startTimestamp` = d.`startTimestamp`" +
+					"WHERE c.`username` = ? AND c.`event` = ? AND c.`adminEmail` = ? AND c.`completion` = 0 ORDER BY c.`startTimestamp` ASC";
 			
+			//System.out.println(windowSelect);
 			PreparedStatement windowStatement = myConnection.prepareStatement(windowSelect);
 			windowStatement.setString(1, userName);
 			windowStatement.setString(2, eventName);
+			windowStatement.setString(3, adminEmail);
 			ResultSet myResults = windowStatement.executeQuery();
 			
 			myConstraints.gridx = startingCol;
@@ -285,8 +288,8 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					myConnection.setAutoCommit(false);
 				}
 				
-				String taskInsert = "INSERT IGNORE INTO `dataCollection`.`Task` (`username`, `session`, `event`, `taskName`, `completion`, `startTimestamp`) VALUES ";
-				String taskRow = "(?, ?, ?, ?, ?, ?)";
+				String taskInsert = "INSERT INTO `dataCollection`.`Task` (`username`, `session`, `event`, `taskName`, `completion`, `startTimestamp`, `adminEmail`) VALUES ";
+				String taskRow = "(?, ?, ?, ?, ?, ?, ?)";
 				PreparedStatement taskStatement = myConnection.prepareStatement(taskInsert + taskRow);
 				taskStatement.setString(1, userName);
 				taskStatement.setString(2, session);
@@ -294,10 +297,11 @@ public class TaskInputGUI extends JFrame implements ActionListener
 				taskStatement.setString(4, curTask);
 				taskStatement.setString(5, "0");
 				taskStatement.setTimestamp(6, curTimestamp);
+				taskStatement.setString(7, adminEmail);
 				taskStatement.execute();
 				
-				String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`) VALUES ";
-				String taskEventRow = "(?, ?, ?, ?, ?, ?)";
+				String taskEventInsert = "INSERT INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`, `adminEmail`) VALUES ";
+				String taskEventRow = "(?, ?, ?, ?, ?, ?, ?)";
 				PreparedStatement taskEventStatement = myConnection.prepareStatement(taskEventInsert + taskEventRow);
 				taskEventStatement.setString(1, userName);
 				taskEventStatement.setString(2, session);
@@ -305,6 +309,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 				taskEventStatement.setString(4, curTask);
 				taskEventStatement.setString(5, "start");
 				taskEventStatement.setTimestamp(6, curTimestamp);
+				taskEventStatement.setString(7, adminEmail);
 				taskEventStatement.execute();
 				
 				myConnection.commit();
@@ -347,8 +352,8 @@ public class TaskInputGUI extends JFrame implements ActionListener
 						myConnection.setAutoCommit(false);
 					}
 					
-					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`) VALUES ";
-					String taskEventRow = "(?, ?, ?, ?, ?, ?)";
+					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`, `adminEmail`) VALUES ";
+					String taskEventRow = "(?, ?, ?, ?, ?, ?, ?)";
 					PreparedStatement taskEventStatement = myConnection.prepareStatement(taskEventInsert + taskEventRow);
 					taskEventStatement.setString(1, curUser);
 					taskEventStatement.setString(2, curSession);
@@ -356,9 +361,10 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					taskEventStatement.setString(4, curTask);
 					taskEventStatement.setString(5, "end");
 					taskEventStatement.setTimestamp(6, curTime);
+					taskEventStatement.setString(7, adminEmail);
 					taskEventStatement.execute();
 					
-					String taskEventUpdate = "UPDATE `dataCollection`.`Task` SET `completion` = ? WHERE `username` = ? AND `session` = ? AND `event` = ? AND `taskName` = ? AND `startTimestamp` = ?";
+					String taskEventUpdate = "UPDATE `dataCollection`.`Task` SET `completion` = ? WHERE `username` = ? AND `session` = ? AND `event` = ? AND `taskName` = ? AND `startTimestamp` = ? AND `adminEmail` = ?";
 					PreparedStatement taskEventUpdateStatement = myConnection.prepareStatement(taskEventUpdate);
 					taskEventUpdateStatement.setString(1, "1");
 					taskEventUpdateStatement.setString(2, curUser);
@@ -366,6 +372,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					taskEventUpdateStatement.setString(4, curEvent);
 					taskEventUpdateStatement.setString(5, curTask);
 					taskEventUpdateStatement.setTimestamp(6, curTime);
+					taskEventUpdateStatement.setString(7, adminEmail);
 					System.out.println(taskEventUpdateStatement.toString());
 					taskEventUpdateStatement.execute();
 					
@@ -406,8 +413,8 @@ public class TaskInputGUI extends JFrame implements ActionListener
 						myConnection.setAutoCommit(false);
 					}
 					
-					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`) VALUES ";
-					String taskEventRow = "(?, ?, ?, ?, ?, ?)";
+					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`, `adminEmail`) VALUES ";
+					String taskEventRow = "(?, ?, ?, ?, ?, ?, ?)";
 					PreparedStatement taskEventStatement = myConnection.prepareStatement(taskEventInsert + taskEventRow);
 					taskEventStatement.setString(1, curUser);
 					taskEventStatement.setString(2, curSession);
@@ -415,6 +422,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					taskEventStatement.setString(4, curTask);
 					taskEventStatement.setString(5, "pause");
 					taskEventStatement.setTimestamp(6, curTime);
+					taskEventStatement.setString(7, adminEmail);
 					taskEventStatement.execute();
 					
 					myConnection.commit();
@@ -454,8 +462,8 @@ public class TaskInputGUI extends JFrame implements ActionListener
 						myConnection.setAutoCommit(false);
 					}
 					
-					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`) VALUES ";
-					String taskEventRow = "(?, ?, ?, ?, ?, ?)";
+					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`, `adminEmail`) VALUES ";
+					String taskEventRow = "(?, ?, ?, ?, ?, ?, ?)";
 					PreparedStatement taskEventStatement = myConnection.prepareStatement(taskEventInsert + taskEventRow);
 					taskEventStatement.setString(1, curUser);
 					taskEventStatement.setString(2, curSession);
@@ -463,6 +471,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					taskEventStatement.setString(4, curTask);
 					taskEventStatement.setString(5, "resume");
 					taskEventStatement.setTimestamp(6, curTime);
+					taskEventStatement.setString(7, adminEmail);
 					taskEventStatement.execute();
 					
 					myConnection.commit();
@@ -502,7 +511,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 						myConnection.setAutoCommit(false);
 					}
 					
-					String taskEventUpdate = "UPDATE `dataCollection`.`Task` SET `completion` = ? WHERE `username` = ? AND `session` = ? AND `event` = ? AND `taskName` = ? AND `startTimestamp` = ?";
+					String taskEventUpdate = "UPDATE `dataCollection`.`Task` SET `completion` = ? WHERE `username` = ? AND `session` = ? AND `event` = ? AND `taskName` = ? AND `startTimestamp` = ? AND `adminEmail` = ?";
 					PreparedStatement taskEventUpdateStatement = myConnection.prepareStatement(taskEventUpdate);
 					taskEventUpdateStatement.setString(1, "1");
 					taskEventUpdateStatement.setString(2, curUser);
@@ -510,10 +519,11 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					taskEventUpdateStatement.setString(4, curEvent);
 					taskEventUpdateStatement.setString(5, curTask);
 					taskEventUpdateStatement.setTimestamp(6, curTime);
+					taskEventUpdateStatement.setString(7, adminEmail);
 					taskEventUpdateStatement.execute();
 					
-					String taskInsert = "INSERT IGNORE INTO `dataCollection`.`Task` (`username`, `session`, `event`, `taskName`, `completion`, `startTimestamp`) VALUES ";
-					String taskRow = "(?, ?, ?, ?, ?, ?)";
+					String taskInsert = "INSERT IGNORE INTO `dataCollection`.`Task` (`username`, `session`, `event`, `taskName`, `completion`, `startTimestamp` , `adminEmail`) VALUES ";
+					String taskRow = "(?, ?, ?, ?, ?, ?, ?)";
 					PreparedStatement taskStatement = myConnection.prepareStatement(taskInsert + taskRow);
 					taskStatement.setString(1, userName);
 					taskStatement.setString(2, session);
@@ -521,10 +531,11 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					taskStatement.setString(4, curTask);
 					taskStatement.setString(5, "0");
 					taskStatement.setTimestamp(6, curTimestamp);
+					taskStatement.setString(7, adminEmail);
 					taskStatement.execute();
 					
-					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`) VALUES ";
-					String taskEventRow = "(?, ?, ?, ?, ?, ?)";
+					String taskEventInsert = "INSERT IGNORE INTO `dataCollection`.`TaskEvent` (`username`, `session`, `event`, `taskName`, `eventDescription`, `startTimestamp`, `adminEmail`) VALUES ";
+					String taskEventRow = "(?, ?, ?, ?, ?, ?, ?)";
 					PreparedStatement taskEventStatement = myConnection.prepareStatement(taskEventInsert + taskEventRow);
 					taskEventStatement.setString(1, userName);
 					taskEventStatement.setString(2, session);
@@ -532,6 +543,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 					taskEventStatement.setString(4, curTask);
 					taskEventStatement.setString(5, "restart");
 					taskEventStatement.setTimestamp(6, curTimestamp);
+					taskEventStatement.setString(7, adminEmail);
 					taskEventStatement.execute();
 					
 					myConnection.commit();
