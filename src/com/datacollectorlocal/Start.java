@@ -250,7 +250,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				byte[] hashBytes = MessageDigest.getInstance("MD5").digest(b);
 				//curVersion = DatatypeConverter.printHexBinary(hashBytes);
 				//System.out.println("Running version: " + curVersion);
-				String fullCheck = "http://" + serverAddress + "/DataCollectorServer/endpointSoftware/currentVersion.jsp";
+				String fullCheck = "http://" + serverAddress + "/DataCollectorServer/openDataCollection/endpointSoftware/currentVersion.jsp";
 				//System.out.println("Checking for update at: " + fullCheck);
 				HttpClient http = new DefaultHttpClient();
 				HttpGet checkGet = new HttpGet(fullCheck);
@@ -415,7 +415,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			myTaskGUI.setSize(400,200);
 			myTaskGUI.addPauseListener(myStart);
 			myTaskGUI.setVisible(true);
-			windowsToClose.add(myTaskGUI);
+			//windowsToClose.add(myTaskGUI);
 		}
 		
 		while(myStart.running)
@@ -453,7 +453,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			currentWindowData = newWindow;
 			if(verbose)
 			System.out.println("New window");
-			//myGenerator.takeScreenshot();
+			myGenerator.takeScreenshot();
 			return true;
 		}
 		return false;
@@ -1562,6 +1562,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
+		checkNew(myMonitor.getTopWindow());
 		Object[] myPair = new Object[3];
 		
 		try

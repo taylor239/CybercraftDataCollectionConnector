@@ -28,6 +28,7 @@ import org.apache.http.util.EntityUtils;
 
 import java.util.zip.*;
 import java.io.*;
+import java.net.URI;
 
 import com.datacollectorlocal.TestingConnectionSource;
 
@@ -92,6 +93,8 @@ public class DataAggregator implements Runnable
 	@Override
 	public void run()
 	{
+		WebsocketDataSender mySender = null;
+		
 		String tokenSelect = "SELECT * FROM `dataCollection`.`UploadToken` WHERE `username` = ?";
 		
 		String getLastSubmit = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 1";
@@ -162,12 +165,12 @@ public class DataAggregator implements Runnable
 			}
 			System.out.println("From: " + initTimestamp);
 			System.out.println("To max " + maxMax);
-			PreparedStatement maxStatement = preConnection.prepareStatement(initSelectScreenshotSizeLimit);
-			maxStatement.setTimestamp(2, initTimestamp);
-			maxStatement.setTimestamp(1, maxMax);
-			ResultSet maxResult = maxStatement.executeQuery();
-			maxResult.next();
-			totalToDo = maxResult.getInt(1);
+			//PreparedStatement maxStatement = preConnection.prepareStatement(initSelectScreenshotSizeLimit);
+			//maxStatement.setTimestamp(2, initTimestamp);
+			//maxStatement.setTimestamp(1, maxMax);
+			//ResultSet maxResult = maxStatement.executeQuery();
+			//maxResult.next();
+			//totalToDo = maxResult.getInt(1);
 		}
 		catch(Exception e)
 		{
@@ -200,20 +203,21 @@ public class DataAggregator implements Runnable
 					initTimestamp = lastSubmitResults.getTimestamp(1);
 				}
 				
-				PreparedStatement maxStatement = myConnection.prepareStatement(initSelectScreenshotSizeLimit);
-				maxStatement.setTimestamp(2, initTimestamp);
-				maxStatement.setTimestamp(1, maxMax);
-				ResultSet maxResult = maxStatement.executeQuery();
-				maxResult.next();
-				totalToDo = maxResult.getInt(1);
+				//PreparedStatement maxStatement = myConnection.prepareStatement(initSelectScreenshotSizeLimit);
+				//maxStatement.setTimestamp(2, initTimestamp);
+				//maxStatement.setTimestamp(1, maxMax);
+				//ResultSet maxResult = maxStatement.executeQuery();
+				//maxResult.next();
+				//totalToDo = maxResult.getInt(1);
 				
 				//System.out.println("Checking images from after " + initTimestamp);
 				
-				PreparedStatement screenshotSizeStatement = myConnection.prepareStatement(selectScreenshotSizeLimit);
-				screenshotSizeStatement.setTimestamp(1, initTimestamp);
-				ResultSet screenshotSizeResults = screenshotSizeStatement.executeQuery();
-				long curSize = 0;
+				//PreparedStatement screenshotSizeStatement = myConnection.prepareStatement(selectScreenshotSizeLimit);
+				//screenshotSizeStatement.setTimestamp(1, initTimestamp);
+				//ResultSet screenshotSizeResults = screenshotSizeStatement.executeQuery();
+				//long curSize = 0;
 				Timestamp maxTime = null;
+				/*
 				while(screenshotSizeResults.next())
 				{
 					long entrySize = screenshotSizeResults.getLong(1);
@@ -229,30 +233,34 @@ public class DataAggregator implements Runnable
 						break;
 					}
 				}
-				
-				PreparedStatement myStmt = null;
-				if(maxTime == null)
-				{
-					myStmt = myConnection.prepareStatement(transferTimeSelect);
-					ResultSet myResults = myStmt.executeQuery();
+				*/
+				//PreparedStatement myStmt = null;
+				PreparedStatement maxStatement = preConnection.prepareStatement(currentTimeQuery);
+				ResultSet maxResult = maxStatement.executeQuery();
+				maxResult.next();
+				maxTime = maxResult.getTimestamp(1);
+				//if(maxTime == null)
+				//{
+				//	myStmt = myConnection.prepareStatement(transferTimeSelect);
+				//	ResultSet myResults = myStmt.executeQuery();
 					
 					//maxTime = new Timestamp(System.currentTimeMillis());
-					if(myResults.next())
-					{
-						maxTime = myResults.getTimestamp(1);
-					}
+				//	if(myResults.next())
+				//	{
+				//		maxTime = myResults.getTimestamp(1);
+				//	}
 					//System.out.println("Putting data up until now");
 					//myStmt = myConnection.prepareStatement(transferTimeInsertDefault);
 					//myStmt.execute();
-				}
-				else
-				{
+				//}
+				//else
+				//{
 					//System.out.println("Putting data up until " + maxTime);
 					//myStmt = myConnection.prepareStatement(transferTimeInsert);
 					//myStmt.setTimestamp(1, maxTime);
 					//myStmt.execute();
-				}
-				myStmt = myConnection.prepareStatement(transferTimeSelect);
+				//}
+				PreparedStatement myStmt = myConnection.prepareStatement(transferTimeSelect);
 				ResultSet myResults = myStmt.executeQuery();
 				//myResults.next();
 				Timestamp curTimestamp = maxTime;
@@ -267,6 +275,11 @@ public class DataAggregator implements Runnable
 				if(lastTimestamp.after(maxMax) && !daemon)
 				{
 					running = false;
+					if(mySender != null && mySender.isOpen())
+					{
+						mySender.send("end");
+						mySender.closeBlocking();
+					}
 					System.out.println("Upload complete!");
 				}
 				else if(lastTimestamp.after(maxMax))
@@ -279,6 +292,8 @@ public class DataAggregator implements Runnable
 				{
 					Thread.currentThread().sleep(5000);
 				}
+				
+				System.out.println("Sending from " + lastTimestamp + " to " + curTimestamp);
 				
 				//Gson gson = new GsonBuilder().setPrettyPrinting().create();
 				Gson gson = new GsonBuilder().create();
@@ -547,6 +562,18 @@ public class DataAggregator implements Runnable
 				
 				System.out.println("Sending to: " + server);
 				
+				
+				if(mySender == null)
+				{
+					mySender = new WebsocketDataSender(new URI(server));
+				}
+				if(!mySender.isOpen())
+				{
+					mySender = new WebsocketDataSender(new URI(server));
+				}
+				String responseString = mySender.sendWait(compressedString);
+				
+				/*
 				HttpClient httpclient = HttpClients.createDefault();
 				HttpPost httppost = new HttpPost(server);
 				List<NameValuePair> params = new ArrayList<NameValuePair>(1);
@@ -557,6 +584,7 @@ public class DataAggregator implements Runnable
 				System.out.println("Sent " + compressedString.length());
 				
 				String responseString = EntityUtils.toString(entity, "UTF-8");
+				*/
 				if(responseString.equals("{\"result\":\"ok\"}"))
 				{
 					System.out.println("All OK:");
