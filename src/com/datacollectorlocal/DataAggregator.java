@@ -146,8 +146,8 @@ public class DataAggregator implements Runnable
 			e.printStackTrace();
 		}
 		
-		int currentDone = 0;
-		int totalToDo = 1;
+		//int //currentDone = 0;
+		//int //totalToDo = 1;
 		
 		try
 		{
@@ -521,8 +521,8 @@ public class DataAggregator implements Runnable
 				}
 				totalObjects.put("TaskEvent", taskEventList);
 				
-				totalObjects.put("totalToDo", totalToDo);
-				totalObjects.put("totalDone", currentDone);
+				//totalObjects.put("totalToDo", totalToDo);
+				//totalObjects.put("totalDone", currentDone);
 				
 				String totalJSON = gson.toJson(totalObjects);
 				//System.out.println("Total: " + totalJSON);
@@ -567,9 +567,14 @@ public class DataAggregator implements Runnable
 				{
 					mySender = new WebsocketDataSender(new URI(server));
 				}
-				if(!mySender.isOpen())
+				while(!mySender.isOpen())
 				{
-					mySender = new WebsocketDataSender(new URI(server));
+					mySender.connectBlocking();
+					if(!mySender.isOpen())
+					{
+						mySender = new WebsocketDataSender(new URI(server));
+						Thread.currentThread().sleep(5000);
+					}
 				}
 				String responseString = mySender.sendWait(compressedString);
 				
@@ -607,6 +612,7 @@ public class DataAggregator implements Runnable
 				{
 					System.out.println("Not OK:");
 					System.out.println(responseString);
+					mySender = new WebsocketDataSender(new URI(server));
 				}
 				
 				/*byte[] buffer = new byte[1024];
@@ -634,7 +640,6 @@ public class DataAggregator implements Runnable
 			catch(Exception e)
 			{
 				e.printStackTrace();
-				return;
 			}
 			
 		} while(running);

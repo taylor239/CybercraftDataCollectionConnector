@@ -10,7 +10,7 @@ public class WebsocketDataSender extends WebSocketClient
 {
 	private boolean hasResponse = false;
 	private String response = "";
-	private long timeout = 1000000;
+	private long timeout = 10000000;
 	private long poll = 1000;
 	//private long maxFrameSize = 60000;
 	
