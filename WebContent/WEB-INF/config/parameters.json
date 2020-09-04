@@ -1,5 +1,5 @@
 {
 	"dbUserName": "dataCollector",
 	"dbPassword": "uBgiDDGhndviQeEZ",
-	"dbAddredd": "jdbc:mysql://localhost:3306"
+	"dbAddredd": "jdbc:mysql://localhost:3306?serverTimezone=UTC"
 }
