@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.sql.*;
 
 import com.google.gson.Gson;
@@ -45,6 +46,9 @@ public class DataAggregator implements Runnable
 	private Thread myThread = null;
 	private boolean daemon = false;
 	private String myEvent = "";
+	
+	private long maxDiff = 600000;
+	private long maxDiffCeiling = 600000000;
 	
 	
 	public static DataAggregator getInstance(String serverAddr, String username, String token, boolean continuous, String event, String admin)
@@ -114,11 +118,14 @@ public class DataAggregator implements Runnable
 		String keyboardInputSelect = "SELECT * FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String taskSelect = "SELECT * FROM `dataCollection`.`Task` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String taskEventSelect = "SELECT * FROM `dataCollection`.`TaskEvent` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
+		
+		String selectEarliestTime = "SELECT MIN(`insertTimestamp`) FROM (SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` > ?     UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`MouseInput`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Process`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessArgs`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessAttributes`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Screenshot`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Task`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`TaskEvent`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`User`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Window`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`WindowDetails`  WHERE `insertTimestamp` > ?) AS `subQuery`";
+		
 		running = true;
 		
 		String currentTimeQuery = "SELECT CURRENT_TIMESTAMP(3)";
 		String initSelectScreenshotSizeLimit = "SELECT COUNT(*) FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
-		Timestamp maxMax = new Timestamp(0);
+		Timestamp maxMax = new Timestamp(1);
 		Connection preConnection = myConnectionSource.getDatabaseConnection();
 		//String myToken = "";
 		//try
@@ -151,17 +158,25 @@ public class DataAggregator implements Runnable
 		
 		try
 		{
-			PreparedStatement lastSubmitStmt = preConnection.prepareStatement(getLastSubmit);
+			PreparedStatement lastSubmitStmt = preConnection.prepareStatement(getLastSubmit, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 			ResultSet lastSubmitResults = lastSubmitStmt.executeQuery();
 			Timestamp initTimestamp = null;
 			if(!lastSubmitResults.first())
 			{
 				System.out.println("No last submit");
-				initTimestamp = new Timestamp(0);
+				initTimestamp = new Timestamp(1);
 			}
 			else
 			{
-				initTimestamp = lastSubmitResults.getTimestamp(1);
+				if(lastSubmitResults.getObject(1) instanceof Timestamp)
+				{
+					initTimestamp = lastSubmitResults.getTimestamp(1);
+				}
+				else
+				{
+					System.out.println("No last submit 2");
+					initTimestamp = new Timestamp(1);
+				}
 			}
 			System.out.println("From: " + initTimestamp);
 			System.out.println("To max " + maxMax);
@@ -179,6 +194,7 @@ public class DataAggregator implements Runnable
 		
 		do
 		{
+			long totalObjectCount = 0;
 			boolean shouldPause = true;
 			//try
 			//{
@@ -191,16 +207,24 @@ public class DataAggregator implements Runnable
 			Connection myConnection = myConnectionSource.getDatabaseConnection();
 			try
 			{
-				PreparedStatement lastSubmitStmt = myConnection.prepareStatement(getLastSubmit);
+				PreparedStatement lastSubmitStmt = myConnection.prepareStatement(getLastSubmit, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet lastSubmitResults = lastSubmitStmt.executeQuery();
 				Timestamp initTimestamp = null;
 				if(!lastSubmitResults.first())
 				{
-					initTimestamp = new Timestamp(0);
+					initTimestamp = new Timestamp(1);
 				}
 				else
 				{
-					initTimestamp = lastSubmitResults.getTimestamp(1);
+					if(lastSubmitResults.getObject(1) instanceof Timestamp)
+					{
+						initTimestamp = lastSubmitResults.getTimestamp(1);
+					}
+					else
+					{
+						System.out.println("Weird timestamp behavior");
+						initTimestamp = new Timestamp(1);
+					}
 				}
 				
 				//PreparedStatement maxStatement = myConnection.prepareStatement(initSelectScreenshotSizeLimit);
@@ -264,9 +288,9 @@ public class DataAggregator implements Runnable
 				ResultSet myResults = myStmt.executeQuery();
 				//myResults.next();
 				Timestamp curTimestamp = maxTime;
-				Timestamp lastTimestamp = new Timestamp(0);
+				Timestamp lastTimestamp = new Timestamp(1);
 				//Timestamp curTimestamp = myResults.getTimestamp(1);
-				//Timestamp lastTimestamp = new Timestamp(0);
+				//Timestamp lastTimestamp = new Timestamp(1);
 				if(myResults.next())
 				{
 					lastTimestamp = myResults.getTimestamp(1);
@@ -287,11 +311,18 @@ public class DataAggregator implements Runnable
 					System.out.println("Finished sync, looping for more");
 				}
 				
-				//System.out.println("Getting entries from " + lastTimestamp + " to " + curTimestamp);
-				if(shouldPause)
+				long diff = curTimestamp.getTime() - lastTimestamp.getTime();
+				if (diff > maxDiff)
 				{
-					Thread.currentThread().sleep(5000);
+					shouldPause = false;
+					curTimestamp = (maxTime = new Timestamp(lastTimestamp.getTime() + maxDiff));
+					System.out.println("Limiting time due to large diff " + diff);
 				}
+				else
+				{
+						shouldPause = true;
+				}
+				//System.out.println("Getting entries from " + lastTimestamp + " to " + curTimestamp);
 				
 				System.out.println("Sending from " + lastTimestamp + " to " + curTimestamp);
 				
@@ -521,6 +552,16 @@ public class DataAggregator implements Runnable
 				}
 				totalObjects.put("TaskEvent", taskEventList);
 				
+				Iterator myIter = totalObjects.entrySet().iterator();
+				while(myIter.hasNext())
+				{
+					Entry objEntry = (Entry) myIter.next();
+					if (objEntry.getValue() instanceof ArrayList)
+					{
+						ArrayList objList = (ArrayList)objEntry.getValue();
+						totalObjectCount += objList.size();
+					}
+				}
 				//totalObjects.put("totalToDo", totalToDo);
 				//totalObjects.put("totalDone", currentDone);
 				
@@ -590,6 +631,32 @@ public class DataAggregator implements Runnable
 				
 				String responseString = EntityUtils.toString(entity, "UTF-8");
 				*/
+				
+				if (totalObjectCount == 0)
+				{
+					System.out.println("Nothing, fast forward to:");
+					PreparedStatement earliestStmt = myConnection.prepareStatement(selectEarliestTime);
+					earliestStmt.setTimestamp(1, lastTimestamp);
+					earliestStmt.setTimestamp(2, lastTimestamp);
+					earliestStmt.setTimestamp(3, lastTimestamp);
+					earliestStmt.setTimestamp(4, lastTimestamp);
+					earliestStmt.setTimestamp(5, lastTimestamp);
+					earliestStmt.setTimestamp(6, lastTimestamp);
+					earliestStmt.setTimestamp(7, lastTimestamp);
+					earliestStmt.setTimestamp(8, lastTimestamp);
+					earliestStmt.setTimestamp(9, lastTimestamp);
+					earliestStmt.setTimestamp(10, lastTimestamp);
+					earliestStmt.setTimestamp(11, lastTimestamp);
+					final ResultSet earliestResults = earliestStmt.executeQuery();
+					final Timestamp earliestTimestamp = null;
+					if (earliestResults.next())
+					{
+						maxTime = earliestResults.getTimestamp(1);
+					}
+					System.out.println(maxTime);
+					earliestStmt.close();
+				}
+				
 				if(responseString.equals("{\"result\":\"ok\"}"))
 				{
 					System.out.println("All OK:");
@@ -607,12 +674,14 @@ public class DataAggregator implements Runnable
 						myStmt.setTimestamp(1, maxTime);
 						myStmt.execute();
 					}
+					maxDiff *= 2;
 				}
 				else
 				{
 					System.out.println("Not OK:");
 					System.out.println(responseString);
 					mySender = new WebsocketDataSender(new URI(server));
+					maxDiff /= 2L;
 				}
 				
 				/*byte[] buffer = new byte[1024];
@@ -636,9 +705,20 @@ public class DataAggregator implements Runnable
 				
 				//System.out.println(totalJSON);
 				myConnection.close();
+				if (this.maxDiff > this.maxDiffCeiling)
+				{
+					this.maxDiff = this.maxDiffCeiling;
+				}
+				if (!shouldPause)
+				{
+					continue;
+				}
+				Thread.currentThread();
+				Thread.sleep(5000L);
 			}
 			catch(Exception e)
 			{
+				maxDiff /= 2L;
 				e.printStackTrace();
 			}
 			
