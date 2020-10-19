@@ -657,7 +657,7 @@ public class DataAggregator implements Runnable
 					earliestStmt.close();
 				}
 				
-				if(responseString.equals("{\"result\":\"ok\"}"))
+				if(responseString != null && responseString.equals("{\"result\":\"ok\"}"))
 				{
 					System.out.println("All OK:");
 					System.out.println(responseString);
@@ -680,7 +680,9 @@ public class DataAggregator implements Runnable
 				{
 					System.out.println("Not OK:");
 					System.out.println(responseString);
+					mySender.closeBlocking();
 					mySender = new WebsocketDataSender(new URI(server));
+					shouldPause = true;
 					maxDiff /= 2L;
 				}
 				
