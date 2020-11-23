@@ -2,6 +2,7 @@ package com.datacollectorlocal;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
@@ -30,7 +31,7 @@ public class ProcessMonitor implements Runnable
 	public synchronized String[] execShellCmd(String cmd)
 	{
 	    try
-	    {  
+	    {
 
 	        Runtime runtime = Runtime.getRuntime();  
 	        Process process = runtime.exec(new String[] { "/bin/bash", "-c", cmd });  
@@ -171,6 +172,7 @@ public class ProcessMonitor implements Runnable
 			//}
 			Scanner myScanner = new Scanner(psOutput[1]);
 			ArrayList output = new ArrayList();
+			//Timestamp insertTimestamp = new Timestamp();
 			while(myScanner.hasNextLine())
 			{
 				String curLine = myScanner.nextLine();

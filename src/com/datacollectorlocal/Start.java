@@ -638,9 +638,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
+		Timestamp curTimestamp = new Timestamp(new Date().getTime()-(int)timeDifference);
 		for(int x=0; x<processes.size(); x++)
 		{
 			((HashMap)processes.get(x)).put("username", userName);
+			((HashMap)processes.get(x)).put("timestamp", curTimestamp);
 			processesToWrite.add(processes.get(x));
 		}
 	}
@@ -957,7 +959,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setTimestamp(attFieldCount, (Timestamp) tmpMap.get("clickedInTime"));
+							processAttStatement.setTimestamp(attFieldCount, (Timestamp) tmpProcess.get("timestamp"));
 							attFieldCount++;
 							
 							ArrayList argList = (ArrayList) tmpProcess.get("ARGS");
@@ -1192,7 +1194,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setTimestamp(attFieldCount, (Timestamp) tmpMap.get("clickedInTime"));
+							processAttStatement.setTimestamp(attFieldCount, (Timestamp) tmpMap.get("timestamp"));
 							attFieldCount++;
 							
 							ArrayList argList = (ArrayList) tmpMap.get("ARGS");

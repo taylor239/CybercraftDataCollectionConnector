@@ -107,7 +107,7 @@ public class DataAggregator implements Runnable
 		String transferTimeInsert = "INSERT IGNORE INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (?)";
 		String currentTimeSelect = "SELECT CURRENT_TIMESTAMP(3)";
 		String transferTimeSelect = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 2";
-		String userSelect = "SELECT * FROM `dataCollection`.`User` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
+		String userSelect = "SELECT * FROM `dataCollection`.`User`";
 		String windowSelect = "SELECT * FROM `dataCollection`.`Window` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String windowDetailsSelect = "SELECT * FROM `dataCollection`.`WindowDetails` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String screenshotSelect = "SELECT * FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
@@ -336,8 +336,8 @@ public class DataAggregator implements Runnable
 				totalObjects.put("admin", myAdminEmail);
 				
 				myStmt = myConnection.prepareStatement(userSelect);
-				myStmt.setTimestamp(1, curTimestamp);
-				myStmt.setTimestamp(2, lastTimestamp);
+				//myStmt.setTimestamp(1, curTimestamp);
+				//myStmt.setTimestamp(2, lastTimestamp);
 				myResults = myStmt.executeQuery();
 				ArrayList userList = new ArrayList();
 				while(myResults.next())
