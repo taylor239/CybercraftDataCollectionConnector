@@ -117,7 +117,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private static String serverAddress = "localhost:8080";
 	
-	private static double timeDifference = 0;
+	private static long timeDifference = 0;
 	
 	private static final String jarPath = (Start.class.getProtectionDomain().getCodeSource().getLocation().getPath()).toString();
 	private static final String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
@@ -263,10 +263,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				HashMap fromJSON = gson.fromJson(checkVersion, HashMap.class);
 				//System.out.println(fromJSON);
 				
-				double serverTime = (Double)fromJSON.get("serverTime");
-				timeDifference = myTime - serverTime;
-				timeDifference = (int)timeDifference/1000;
-				timeDifference *= 1000;
+				//double serverTime = (Double)fromJSON.get("serverTime");
+				//timeDifference = myTime - serverTime;
+				//timeDifference = timeDifference/1000;
+				//timeDifference *= 1000;
 				
 				if(fromJSON.get("status").equals("error"))
 				{
@@ -445,7 +445,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			if(newWindow != null)
 			{
 				//Calendar currentTime = Calendar.getInstance();
-				newWindow.put("clickedInTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+				newWindow.put("clickedInTime", new Timestamp(new Date().getTime()-timeDifference));
 				newWindow.put("username", userName);
 				windowsToWrite.add(newWindow);
 			}
@@ -473,13 +473,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		//if(verbose)
 		//System.out.println("Mouse Clicked: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "click");
 		//Calendar currentTime = Calendar.getInstance();
-		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-timeDifference));
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
@@ -494,13 +494,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		//if(verbose)
 		//System.out.println("Mouse Pressed: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "down");
 		//Calendar currentTime = Calendar.getInstance();
-		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-timeDifference));
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
@@ -515,13 +515,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		//if(verbose)
 		//System.out.println("Mouse Released: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "up");
 		//Calendar currentTime = Calendar.getInstance();
-		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-timeDifference));
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
@@ -542,13 +542,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		//if(verbose)
 		//System.out.println("Mouse Dragged: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "drag");
 		//Calendar currentTime = Calendar.getInstance();
-		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+		clickToWrite.put("clickTime", new Timestamp(new Date().getTime()-timeDifference));
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
@@ -569,10 +569,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "press");
-		keyToWrite.put("inputTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+		keyToWrite.put("inputTime", new Timestamp(new Date().getTime()-timeDifference));
 		keyToWrite.put("window", currentWindowData);
 		keyToWrite.put("button", NativeKeyEvent.getKeyText(arg0.getKeyCode()));
 		if(currentWindowData == null)
@@ -591,10 +591,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "release");
-		keyToWrite.put("inputTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+		keyToWrite.put("inputTime", new Timestamp(new Date().getTime()-timeDifference));
 		keyToWrite.put("window", currentWindowData);
 		keyToWrite.put("button", NativeKeyEvent.getKeyText(arg0.getKeyCode()));
 		if(currentWindowData == null)
@@ -617,10 +617,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		//System.out.println(Short.MAX_VALUE * 2);
 		//if(true)
 		//	return;
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "type");
-		keyToWrite.put("inputTime", new Timestamp(new Date().getTime()-(int)timeDifference));
+		keyToWrite.put("inputTime", new Timestamp(new Date().getTime()-timeDifference));
 		keyToWrite.put("preciseTime", arg0.getWhen());
 		keyToWrite.put("window", currentWindowData);
 		keyToWrite.put("button", "" + arg0.getKeyChar());
@@ -638,7 +638,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp curTimestamp = new Timestamp(new Date().getTime()-(int)timeDifference);
+		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
 		for(int x=0; x<processes.size(); x++)
 		{
 			((HashMap)processes.get(x)).put("username", userName);
@@ -710,7 +710,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			
 			try
 			{
-				checkNew(myMonitor.getTopWindow());
+				checkNew(myMonitor.getTopWindow(timeDifference));
 				if(count > 5 && !windowsToWrite.isEmpty() || !clicksToWrite.isEmpty() || !screenshotsToWrite.isEmpty())
 				{
 					
@@ -775,6 +775,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						{
 							HashMap tmpMap = (HashMap) windowsToWrite.poll();
 							HashMap tmpProcess = (HashMap) tmpMap.get("ProcessInfo");
+							tmpProcess.put("timestamp", tmpMap.get("clickedInTime"));
 							ArrayList argList = (ArrayList) tmpProcess.get("ARGS");
 							//argCount += argList.size();
 							
@@ -1563,7 +1564,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 		Object[] myPair = new Object[3];
 		
 		try
@@ -1606,7 +1607,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	public void resume()
 	{
 		paused = false;
-		checkNew(myMonitor.getTopWindow());
+		checkNew(myMonitor.getTopWindow(timeDifference));
 	}
 
 }

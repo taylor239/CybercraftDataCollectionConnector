@@ -1,7 +1,9 @@
 package com.datacollectorlocal;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
@@ -25,7 +27,7 @@ public class ActiveWindowMonitor
 		
 	}
 	
-	public HashMap getTopWindow()
+	public HashMap getTopWindow(long diff)
 	{
 		//System.out.println("Getting window info");
 		HashMap myReturn = new HashMap();
@@ -67,6 +69,7 @@ public class ActiveWindowMonitor
 	    	windowPID = tmpStr.substring(24);
 	    }
 	    HashMap processInfo = separatePS(execShellCmd(WIN_PROCESS_INFO + windowPID)[1]);
+	    processInfo.put("timestamp", new Timestamp(new Date().getTime() - diff));
 	    /*System.out.println("process time: " + (System.currentTimeMillis() - initTime));
 	    System.out.println("window title is: "+ windowTitle);
 	    System.out.println("window info is: " + winInfoMcd);
@@ -281,7 +284,7 @@ public class ActiveWindowMonitor
 				}
 			}
 		}
-		
+		//myReturn.put("timestamp", new Timestamp(new Date().getTime()));
 		return myReturn;
 	}
 	
