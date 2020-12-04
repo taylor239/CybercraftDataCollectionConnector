@@ -102,10 +102,10 @@ public class DataAggregator implements Runnable
 		String tokenSelect = "SELECT * FROM `dataCollection`.`UploadToken` WHERE `username` = ?";
 		
 		String getLastSubmit = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 1";
-		String transferTimeInsertDefault = "INSERT IGNORE INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (CURRENT_TIMESTAMP(3))";
+		String transferTimeInsertDefault = "INSERT IGNORE INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (UTC_TIMESTAMP(3))";
 		String selectScreenshotSizeLimit = "SELECT OCTET_LENGTH(`screenshot`), `insertTimestamp` FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` >= ? ORDER BY `insertTimestamp` ASC";
 		String transferTimeInsert = "INSERT IGNORE INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (?)";
-		String currentTimeSelect = "SELECT CURRENT_TIMESTAMP(3)";
+		String currentTimeSelect = "SELECT UTC_TIMESTAMP(3)";
 		String transferTimeSelect = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 2";
 		String userSelect = "SELECT * FROM `dataCollection`.`User`";
 		String windowSelect = "SELECT * FROM `dataCollection`.`Window` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
@@ -119,11 +119,11 @@ public class DataAggregator implements Runnable
 		String taskSelect = "SELECT * FROM `dataCollection`.`Task` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String taskEventSelect = "SELECT * FROM `dataCollection`.`TaskEvent` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		
-		String selectEarliestTime = "SELECT MIN(`insertTimestamp`) FROM (SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` > ?     UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`MouseInput`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Process`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessArgs`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessAttributes`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Screenshot`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Task`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`TaskEvent`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`User`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Window`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), CURRENT_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`WindowDetails`  WHERE `insertTimestamp` > ?) AS `subQuery`";
+		String selectEarliestTime = "SELECT MIN(`insertTimestamp`) FROM (SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` > ?     UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`MouseInput`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Process`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessArgs`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessAttributes`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Screenshot`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Task`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`TaskEvent`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`User`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Window`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`WindowDetails`  WHERE `insertTimestamp` > ?) AS `subQuery`";
 		
 		running = true;
 		
-		String currentTimeQuery = "SELECT CURRENT_TIMESTAMP(3)";
+		String currentTimeQuery = "SELECT UTC_TIMESTAMP(3)";
 		String initSelectScreenshotSizeLimit = "SELECT COUNT(*) FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		Timestamp maxMax = new Timestamp(1);
 		Connection preConnection = myConnectionSource.getDatabaseConnection();
@@ -559,7 +559,15 @@ public class DataAggregator implements Runnable
 					if (objEntry.getValue() instanceof ArrayList)
 					{
 						ArrayList objList = (ArrayList)objEntry.getValue();
-						totalObjectCount += objList.size();
+						System.out.println("Sending " + objList.size() + " from " + objEntry.getKey());
+						if(objEntry.getKey().equals("User"))
+						{
+							
+						}
+						else
+						{
+							totalObjectCount += objList.size();
+						}
 					}
 				}
 				//totalObjects.put("totalToDo", totalToDo);
