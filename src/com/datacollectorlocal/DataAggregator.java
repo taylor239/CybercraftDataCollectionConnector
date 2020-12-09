@@ -49,6 +49,7 @@ public class DataAggregator implements Runnable
 	
 	private long maxDiff = 600000;
 	private long maxDiffCeiling = 600000000;
+	private long maxDiffFloor = 60000;
 	
 	
 	public static DataAggregator getInstance(String serverAddr, String username, String token, boolean continuous, String event, String admin)
@@ -196,6 +197,15 @@ public class DataAggregator implements Runnable
 		{
 			long totalObjectCount = 0;
 			boolean shouldPause = true;
+			
+			if (this.maxDiff > this.maxDiffCeiling)
+			{
+				this.maxDiff = this.maxDiffCeiling;
+			}
+			if (this.maxDiff < this.maxDiffFloor)
+			{
+				this.maxDiff = this.maxDiffFloor;
+			}
 			//try
 			//{
 			//	Thread.currentThread().sleep(5000);
@@ -317,6 +327,7 @@ public class DataAggregator implements Runnable
 					shouldPause = false;
 					curTimestamp = (maxTime = new Timestamp(lastTimestamp.getTime() + maxDiff));
 					System.out.println("Limiting time due to large diff " + diff);
+					System.out.println("By " + maxDiff);
 				}
 				else
 				{
@@ -624,6 +635,7 @@ public class DataAggregator implements Runnable
 						mySender = new WebsocketDataSender(new URI(server));
 						Thread.currentThread().sleep(5000);
 					}
+					Thread.currentThread().sleep(2500);
 				}
 				String responseString = mySender.sendWait(compressedString);
 				
@@ -719,16 +731,36 @@ public class DataAggregator implements Runnable
 				{
 					this.maxDiff = this.maxDiffCeiling;
 				}
+				if (this.maxDiff < this.maxDiffFloor)
+				{
+					this.maxDiff = this.maxDiffFloor;
+				}
 				if (!shouldPause)
 				{
 					continue;
 				}
 				Thread.currentThread();
-				Thread.sleep(5000L);
+				Thread.sleep(5000);
 			}
 			catch(Exception e)
 			{
+				try
+				{
+					Thread.sleep(5000);
+				}
+				catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
 				maxDiff /= 2L;
+				if (this.maxDiff > this.maxDiffCeiling)
+				{
+					this.maxDiff = this.maxDiffCeiling;
+				}
+				if (this.maxDiff < this.maxDiffFloor)
+				{
+					this.maxDiff = this.maxDiffFloor;
+				}
 				e.printStackTrace();
 			}
 			
