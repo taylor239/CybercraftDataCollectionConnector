@@ -87,11 +87,11 @@ public class PortableProcessMonitor implements Runnable
 		myReturn.put("START", curProc.getStartTime());
 		myReturn.put("TIME", curProc.getUpTime());
 		String commandLine = curProc.getCommandLine();
-		String[] splited = commandLine.split("\\s+");
-		myReturn.put("COMMAND", splited[0]);
+		String[] splited = commandLine.split(" (?=\")|(?<=\")\\s");
+		myReturn.put("COMMAND", curProc.getName());
 		ArrayList args = new ArrayList();
 		Collections.addAll(args, splited);
-		args.remove(0);
+		//args.remove(0);
 		if(args.size() > 0)
 		{
 			myReturn.put("ARGS", args);

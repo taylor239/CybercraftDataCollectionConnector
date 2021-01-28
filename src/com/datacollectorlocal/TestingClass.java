@@ -5,8 +5,15 @@ import java.lang.ProcessHandle.Info;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
+import oshi.SystemInfo;
+import oshi.hardware.HardwareAbstractionLayer;
+import oshi.software.os.OSDesktopWindow;
+import oshi.software.os.OperatingSystem;
+
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Stream;
 
 
@@ -14,64 +21,46 @@ import java.util.stream.Stream;
 
 public class TestingClass
 {
+	static SystemInfo si;
+	static HardwareAbstractionLayer hal;
+	static OperatingSystem os;
+	
 	public static void main(String[] args)
 	{
+		si = new SystemInfo();
+		hal = si.getHardware();
+		os = si.getOperatingSystem();
 		
-	}
-	public static void oldMain(String[] args)
-	{
-		System.out.println("Starting test");
-		System.out.println(System.getProperty("os.name"));
-		//System.getProperties().list(System.out);
+		PortableProcessMonitor myProcMonitor = new PortableProcessMonitor();
+		System.out.println(os);
 		
-		Stream<ProcessHandle> allProcesses = ProcessHandle.allProcesses();
-		allProcesses.forEach(processHandle ->
+		HashMap parentWindow = new HashMap();
+		//System.out.println(hal.getComputerSystem());
+		List<OSDesktopWindow> windows = os.getDesktopWindows(true);
+		int maxOrder = 0;
+		for(int x = 0; x < windows.size(); x++)
 		{
-			System.out.println(processHandle.pid());
-			Info info = processHandle.info();
-			
-			String command = "";
-			if(info.command().isPresent())
+			if(windows.get(x).getTitle().isEmpty() || windows.get(x).getLocAndSize().getWidth() == 0 || windows.get(x).getLocAndSize().getHeight() == 0)
 			{
-				command = info.command().get();
-				System.out.println(command);
+				continue;
 			}
-			
-			String[] arguments = null;
-			if(info.arguments().isPresent())
+			if(windows.get(x).getOrder() > maxOrder)
 			{
-				arguments = info.arguments().get();
-				System.out.println(arguments);
+				maxOrder = windows.get(x).getOrder();
 			}
-			
-			String user = "";
-			if(info.user().isPresent())
+			System.out.println(windows.get(x).getOrder());
+			if(parentWindow.containsKey(windows.get(x).getOwningProcessId()))
 			{
-				user = info.user().get();
-				System.out.println(user);
+				System.out.println("Has child");
+				System.out.println(windows.get(x));
+				System.out.println(myProcMonitor.getProcessInfo((int)windows.get(x).getOwningProcessId()));
 			}
+			parentWindow.put(windows.get(x).getOwningProcessId(), null);
+			//System.out.println(windows.get(x));
+			//System.out.println(windows.get(x).getCommand());
+			//System.out.println(myProcMonitor.getProcessInfo((int)windows.get(x).getOwningProcessId()));
 			
-			Instant now = Instant.now();
-			Instant startInstant = null;
-			long diff = 0;
-			if(info.startInstant().isPresent())
-			{
-				startInstant = info.startInstant().get();
-				System.out.println(startInstant.toEpochMilli());
-				diff = now.toEpochMilli() - startInstant.toEpochMilli();
-			}
-			
-			Duration totalCpuDuration = null;
-			double cpuUse = 0;
-			if(info.totalCpuDuration().isPresent())
-			{
-				totalCpuDuration = info.totalCpuDuration().get();
-				System.out.println(totalCpuDuration.toMillis());
-				System.out.println("CPU Use %:");
-				cpuUse = (100 * ((double)totalCpuDuration.toMillis() / (double)diff));
-				System.out.println(cpuUse);
-			}
-			
-		});
+		}
+		System.out.println(maxOrder);
 	}
 }

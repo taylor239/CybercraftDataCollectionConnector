@@ -84,7 +84,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private Thread myThread;
 	private static ArrayList windowsToClose = new ArrayList();
-	private ActiveWindowMonitor myMonitor = new ActiveWindowMonitor();
+	private PortableActiveWindowMonitor myMonitor = new PortableActiveWindowMonitor();
 	private String windowID = "";
 	private String windowName = "";
 	private int windowX = -1;
@@ -428,8 +428,18 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		curAggregator = myAggregator;
 	}
 	
-	public synchronized boolean checkNew(HashMap newWindow)
+	public synchronized boolean checkNew(ArrayList newWindows)
 	{
+		HashMap newWindow = null;
+		for(int x=0; x < newWindows.size(); x++)
+		{
+			HashMap curWindow = (HashMap) newWindows.get(x);
+			if(curWindow.get("IsFocus").equals("1"))
+			{
+				newWindow = curWindow;
+			}
+			windowsToWrite.add(curWindow);
+		}
 		if(newWindow == null)
 		{
 			return false;
@@ -447,7 +457,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				//Calendar currentTime = Calendar.getInstance();
 				newWindow.put("clickedInTime", new Timestamp(new Date().getTime()-timeDifference));
 				newWindow.put("username", userName);
-				windowsToWrite.add(newWindow);
+				//windowsToWrite.add(newWindow);
 			}
 			currentWindowData = newWindow;
 			if(verbose)
@@ -764,8 +774,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						String windowInsert = "INSERT IGNORE INTO `dataCollection`.`Window` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `firstClass`, `secondClass`) VALUES ";
 						String eachWindowRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
-						String windowDetailInsert = "INSERT IGNORE INTO `dataCollection`.`WindowDetails` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `x`, `y`, `width`, `height`, `name`, `timeChanged`) VALUES ";
-						String eachWindowDetailRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String windowDetailInsert = "INSERT IGNORE INTO `dataCollection`.`WindowDetails` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `x`, `y`, `width`, `height`, `name`, `timeChanged`, `active`) VALUES ";
+						String eachWindowDetailRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						boolean hasArgs = false;
 						
@@ -961,7 +971,9 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							windowDetailFieldCount++;
 							
 							processAttStatement.setTimestamp(attFieldCount, (Timestamp) tmpProcess.get("timestamp"));
+							windowDetailStatement.setInt(windowDetailFieldCount, Integer.parseInt("" + tmpMap.get("clickedInTime")));
 							attFieldCount++;
+							windowDetailFieldCount++;
 							
 							ArrayList argList = (ArrayList) tmpProcess.get("ARGS");
 							for(int y=0; argList != null && y<argList.size(); y++)
