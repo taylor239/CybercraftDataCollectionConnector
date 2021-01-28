@@ -76,6 +76,10 @@ import org.jnativehook.mouse.NativeMouseWheelListener;
 
 import com.google.gson.Gson;
 
+import oshi.SystemInfo;
+import oshi.hardware.HardwareAbstractionLayer;
+import oshi.software.os.OperatingSystem;
+
 
 
 public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener, PauseListener
@@ -87,10 +91,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private PortableActiveWindowMonitor myMonitor = new PortableActiveWindowMonitor();
 	private String windowID = "";
 	private String windowName = "";
-	private int windowX = -1;
-	private int windowY = -1;
-	private int windowWidth = -1;
-	private int windowHeight = -1;
+	private double windowX = -1;
+	private double windowY = -1;
+	private double windowWidth = -1;
+	private double windowHeight = -1;
 	private HashMap currentWindowData = null;
 	private ConcurrentLinkedQueue windowsToWrite = new ConcurrentLinkedQueue();
 	private ConcurrentLinkedQueue clicksToWrite = new ConcurrentLinkedQueue();
@@ -127,8 +131,17 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private static String[] programArgs = new String[0];
 	private static boolean hasBeenLaunched = false;
 	
+	private SystemInfo si;
+	private HardwareAbstractionLayer hal;
+	private OperatingSystem os;
+	
 	public Start(String user, String event, String admin, int screenshot)
 	{
+		si = new SystemInfo();
+		hal = si.getHardware();
+		os = si.getOperatingSystem();
+		
+		
 		screenshotTimeout = screenshot;
 		
 		sessionToken = UUID.randomUUID().toString();
@@ -431,6 +444,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	public synchronized boolean checkNew(ArrayList newWindows)
 	{
 		HashMap newWindow = null;
+		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
 		for(int x=0; x < newWindows.size(); x++)
 		{
 			HashMap curWindow = (HashMap) newWindows.get(x);
@@ -438,26 +452,30 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			{
 				newWindow = curWindow;
 			}
-			windowsToWrite.add(curWindow);
 		}
 		if(newWindow == null)
 		{
 			return false;
 		}
-		if(!newWindow.get("WindowID").equals(windowID) || !newWindow.get("WindowTitle").equals(windowName) || !((int)newWindow.get("x") == windowX) || !((int)newWindow.get("y") == windowY || !((int)newWindow.get("width") == windowWidth) || !((int)newWindow.get("height") == windowHeight)))
+		if(!("" + newWindow.get("WindowID")).equals(windowID) || !("" + newWindow.get("WindowTitle")).equals(windowName) || !((double)newWindow.get("x") == windowX) || !((double)newWindow.get("y") == windowY || !((double)newWindow.get("width") == windowWidth) || !((double)newWindow.get("height") == windowHeight)))
 		{
-			windowName = (String) newWindow.get("WindowTitle");
-			windowID = (String) newWindow.get("WindowID");
-			windowX = (int) newWindow.get("x");
-			windowY = (int) newWindow.get("y");
-			windowWidth = (int) newWindow.get("width");
-			windowHeight = (int) newWindow.get("height");
+			windowName = "" + newWindow.get("WindowTitle");
+			windowID = "" + newWindow.get("WindowID");
+			windowX = (double) newWindow.get("x");
+			windowY = (double) newWindow.get("y");
+			windowWidth = (double) newWindow.get("width");
+			windowHeight = (double) newWindow.get("height");
 			if(newWindow != null)
 			{
-				//Calendar currentTime = Calendar.getInstance();
-				newWindow.put("clickedInTime", new Timestamp(new Date().getTime()-timeDifference));
-				newWindow.put("username", userName);
-				//windowsToWrite.add(newWindow);
+				for(int x=0; x < newWindows.size(); x++)
+				{
+					HashMap curWindow = (HashMap) newWindows.get(x);
+					
+					curWindow.put("clickedInTime", curTimestamp);
+					curWindow.put("username", userName);
+					
+					windowsToWrite.add(curWindow);
+				}
 			}
 			currentWindowData = newWindow;
 			if(verbose)
@@ -736,14 +754,15 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					eventStatement.execute();
 					eventStatement.close();
 					
-					String userInsert = "INSERT IGNORE INTO `dataCollection`.`User` (`username`, `adminEmail`, `session`, `event`) VALUES ";
-					String userRow = "(?, ?,?,?)";
+					String userInsert = "INSERT IGNORE INTO `dataCollection`.`User` (`username`, `adminEmail`, `session`, `event`, `sessionEnvironment`) VALUES ";
+					String userRow = "(?, ?, ?, ?, ?)";
 					userInsert += userRow;
 					PreparedStatement userStatement = myConnection.prepareStatement(userInsert);
 					userStatement.setString(1, userName);
 					userStatement.setString(2, adminEmail);
 					userStatement.setString(3, sessionToken);
 					userStatement.setString(4, eventName);
+					userStatement.setString(5, "" + os + " " + hal.getComputerSystem() + " " + hal.getProcessor());
 					userStatement.execute();
 					userStatement.close();
 					
@@ -938,25 +957,25 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							
 							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("%MEM"));
 							windowStatement.setString(windowFieldCount, "" +  tmpMap.get("WindowFirstClass"));
-							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("x"));
+							windowDetailStatement.setInt(windowDetailFieldCount, (int) Math.round((double) tmpMap.get("x")));
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
 							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("VSZ"));
 							windowStatement.setString(windowFieldCount, "" +  tmpMap.get("WindowSecondClass"));
-							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("y"));
+							windowDetailStatement.setInt(windowDetailFieldCount, (int) Math.round((double) tmpMap.get("y")));
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
 							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("RSS"));
-							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("width"));
+							windowDetailStatement.setInt(windowDetailFieldCount, (int) Math.round((double) tmpMap.get("width")));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
 							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("TTY"));
-							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("height"));
+							windowDetailStatement.setInt(windowDetailFieldCount, (int) Math.round((double) tmpMap.get("height")));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
@@ -971,7 +990,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							windowDetailFieldCount++;
 							
 							processAttStatement.setTimestamp(attFieldCount, (Timestamp) tmpProcess.get("timestamp"));
-							windowDetailStatement.setInt(windowDetailFieldCount, Integer.parseInt("" + tmpMap.get("clickedInTime")));
+							windowDetailStatement.setInt(windowDetailFieldCount, Integer.parseInt("" + tmpMap.get("IsFocus")));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							

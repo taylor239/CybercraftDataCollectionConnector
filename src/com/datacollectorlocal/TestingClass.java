@@ -31,6 +31,7 @@ public class TestingClass
 		hal = si.getHardware();
 		os = si.getOperatingSystem();
 		
+		
 		PortableProcessMonitor myProcMonitor = new PortableProcessMonitor();
 		System.out.println(os);
 		
