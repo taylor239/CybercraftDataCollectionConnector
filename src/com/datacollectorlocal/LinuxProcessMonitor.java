@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-public class ProcessMonitor implements Runnable
+public class LinuxProcessMonitor implements Runnable
 {
 	private Thread myThread = null;
 	private boolean running = false;
@@ -16,11 +16,16 @@ public class ProcessMonitor implements Runnable
 	private int time = 0;
 	private Start toFeed = null;
 	
-	public ProcessMonitor(int timeout)
+	public LinuxProcessMonitor(int timeout)
 	{
 		time = timeout;
 		myThread = new Thread(this);
 		myThread.start();
+	}
+	
+	public LinuxProcessMonitor()
+	{
+		time = -1;
 	}
 	
 	public void setStart(Start nextStart)
@@ -193,6 +198,27 @@ public class ProcessMonitor implements Runnable
 		}
 	}
 	
+	public ArrayList getProcesses()
+	{
+		String[] psOutput = execShellCmd(WIN_PROCESS_INFO);
+		//for(int x=0; x<psOutput.length; x++)
+		//{
+			//System.out.println(psOutput[x]);
+		//}
+		Scanner myScanner = new Scanner(psOutput[1]);
+		ArrayList output = new ArrayList();
+		//Timestamp insertTimestamp = new Timestamp();
+		while(myScanner.hasNextLine())
+		{
+			String curLine = myScanner.nextLine();
+			//System.out.println(curLine);
+			HashMap processInfo = separatePS(curLine);
+			//System.out.println(processInfo);
+			output.add(processInfo);
+		}
+		return output;
+	}
+	
 	public void stop()
 	{
 		running = false;
@@ -200,6 +226,6 @@ public class ProcessMonitor implements Runnable
 	
 	public static void main(String[] args)
 	{
-		ProcessMonitor myMonitor = new ProcessMonitor(2000);
+		LinuxProcessMonitor myMonitor = new LinuxProcessMonitor(2000);
 	}
 }

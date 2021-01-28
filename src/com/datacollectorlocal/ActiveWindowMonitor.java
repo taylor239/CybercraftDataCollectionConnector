@@ -21,10 +21,11 @@ public class ActiveWindowMonitor
 	public static final String WIN_PROCESS_INFO = "ps -up ";
 	public int finalExitValue = 0;
 	
+	private PortableProcessMonitor myProcMonitor;
 	
 	public ActiveWindowMonitor()
 	{
-		
+		myProcMonitor = new PortableProcessMonitor();
 	}
 	
 	public HashMap getTopWindow(long diff)
@@ -68,7 +69,9 @@ public class ActiveWindowMonitor
 	    {
 	    	windowPID = tmpStr.substring(24);
 	    }
-	    HashMap processInfo = separatePS(execShellCmd(WIN_PROCESS_INFO + windowPID)[1]);
+	    
+	    //HashMap processInfo = separatePS(execShellCmd(WIN_PROCESS_INFO + windowPID)[1]);
+	    HashMap processInfo = myProcMonitor.getProcessInfo(Integer.parseInt(windowPID));
 	    processInfo.put("timestamp", new Timestamp(new Date().getTime() - diff));
 	    /*System.out.println("process time: " + (System.currentTimeMillis() - initTime));
 	    System.out.println("window title is: "+ windowTitle);

@@ -100,7 +100,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private int screenshotTimeout = 10000;
 	private ScreenshotGenerator myGenerator;
 	private int processTimeout = 20000;
-	private ProcessMonitor myProcessMonitor;
+	private PortableProcessMonitor myProcessMonitor;
 	private boolean running = false;
 	private TestingConnectionSource connectionSource = new TestingConnectionSource();
 	private static TaskInputGUI myTaskGUI;
@@ -154,7 +154,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		myGenerator = new ScreenshotGenerator(screenshotTimeout);
 		myGenerator.addScreenshotListener(this);
-		myProcessMonitor = new ProcessMonitor(processTimeout);
+		myProcessMonitor = new PortableProcessMonitor(processTimeout);
 		myProcessMonitor.setStart(this);
 	}
 	
@@ -887,75 +887,75 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpProcess.get("USER"));
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("USER"));
-							windowStatement.setString(windowFieldCount, (String) tmpProcess.get("USER"));
-							windowDetailStatement.setString(windowDetailFieldCount, (String) tmpProcess.get("USER"));
+							processStatement.setString(fieldCount, "" +  tmpProcess.get("USER"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("USER"));
+							windowStatement.setString(windowFieldCount, "" +  tmpProcess.get("USER"));
+							windowDetailStatement.setString(windowDetailFieldCount, "" +  tmpProcess.get("USER"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpProcess.get("PID"));
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("PID"));
-							windowStatement.setString(windowFieldCount, (String) tmpProcess.get("PID"));
-							windowDetailStatement.setString(windowDetailFieldCount, (String) tmpProcess.get("PID"));
+							processStatement.setString(fieldCount, "" +  tmpProcess.get("PID"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("PID"));
+							windowStatement.setString(windowFieldCount, "" +  tmpProcess.get("PID"));
+							windowDetailStatement.setString(windowDetailFieldCount, "" +  tmpProcess.get("PID"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpProcess.get("START"));
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("START"));
-							windowStatement.setString(windowFieldCount, (String) tmpProcess.get("START"));
-							windowDetailStatement.setString(windowDetailFieldCount, (String) tmpProcess.get("START"));
+							processStatement.setString(fieldCount, "" +  tmpProcess.get("START"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("START"));
+							windowStatement.setString(windowFieldCount, "" +  tmpProcess.get("START"));
+							windowDetailStatement.setString(windowDetailFieldCount, "" +  tmpProcess.get("START"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							//processStatement.setString(fieldCount, (String) tmpProcess.get("TIME"));
+							//processStatement.setString(fieldCount, "" +  tmpProcess.get("TIME"));
 							//fieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpProcess.get("COMMAND"));
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("%CPU"));
-							windowStatement.setString(windowFieldCount, (String) tmpMap.get("WindowID"));
-							windowDetailStatement.setString(windowDetailFieldCount, (String) tmpMap.get("WindowID"));
+							processStatement.setString(fieldCount, "" +  tmpProcess.get("COMMAND"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("%CPU"));
+							windowStatement.setString(windowFieldCount, "" +  tmpMap.get("WindowID"));
+							windowDetailStatement.setString(windowDetailFieldCount, "" +  tmpMap.get("WindowID"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("%MEM"));
-							windowStatement.setString(windowFieldCount, (String) tmpMap.get("WindowFirstClass"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("%MEM"));
+							windowStatement.setString(windowFieldCount, "" +  tmpMap.get("WindowFirstClass"));
 							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("x"));
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("VSZ"));
-							windowStatement.setString(windowFieldCount, (String) tmpMap.get("WindowSecondClass"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("VSZ"));
+							windowStatement.setString(windowFieldCount, "" +  tmpMap.get("WindowSecondClass"));
 							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("y"));
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("RSS"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("RSS"));
 							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("width"));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("TTY"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("TTY"));
 							windowDetailStatement.setInt(windowDetailFieldCount, (int) tmpMap.get("height"));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("STAT"));
-							windowDetailStatement.setString(windowDetailFieldCount, (String) tmpMap.get("WindowTitle"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("STAT"));
+							windowDetailStatement.setString(windowDetailFieldCount, "" +  tmpMap.get("WindowTitle"));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpProcess.get("TIME"));
+							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("TIME"));
 							windowDetailStatement.setTimestamp(windowDetailFieldCount, (Timestamp) tmpMap.get("clickedInTime"));
 							attFieldCount++;
 							windowDetailFieldCount++;
@@ -966,7 +966,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							ArrayList argList = (ArrayList) tmpProcess.get("ARGS");
 							for(int y=0; argList != null && y<argList.size(); y++)
 							{
-								processArgStatement.setString(argFieldCount, (String) tmpMap.get("username"));
+								processArgStatement.setString(argFieldCount, "" +  tmpMap.get("username"));
 								argFieldCount++;
 								
 								processArgStatement.setString(argFieldCount, adminEmail);
@@ -978,22 +978,22 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 								processArgStatement.setString(argFieldCount, eventName);
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) tmpProcess.get("USER"));
+								processArgStatement.setString(argFieldCount, "" +  tmpProcess.get("USER"));
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) tmpProcess.get("PID"));
+								processArgStatement.setString(argFieldCount, "" +  tmpProcess.get("PID"));
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) tmpProcess.get("START"));
+								processArgStatement.setString(argFieldCount, "" +  tmpProcess.get("START"));
 								argFieldCount++;
 								
-								//processArgStatement.setString(argFieldCount, (String) tmpProcess.get("TIME"));
+								//processArgStatement.setString(argFieldCount, "" +  tmpProcess.get("TIME"));
 								//argFieldCount++;
 								
 								processArgStatement.setInt(argFieldCount, y);
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) argList.get(y));
+								processArgStatement.setString(argFieldCount, "" +  argList.get(y));
 								argFieldCount++;
 							}
 							
@@ -1110,8 +1110,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						{
 							HashMap tmpMap = (HashMap) nextProcessQueue.poll();
 							
-							processStatement.setString(fieldCount, (String) tmpMap.get("username"));
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("username"));
+							processStatement.setString(fieldCount, "" +  tmpMap.get("username"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("username"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
@@ -1138,60 +1138,60 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpMap.get("USER"));
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("USER"));
+							processStatement.setString(fieldCount, "" +  tmpMap.get("USER"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("USER"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpMap.get("PID"));
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("PID"));
+							processStatement.setString(fieldCount, "" + tmpMap.get("PID"));
+							processAttStatement.setString(attFieldCount, "" + tmpMap.get("PID"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpMap.get("START"));
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("START"));
+							processStatement.setString(fieldCount, "" + tmpMap.get("START"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("START"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							//processStatement.setString(fieldCount, (String) tmpProcess.get("TIME"));
+							//processStatement.setString(fieldCount, "" +  tmpProcess.get("TIME"));
 							//fieldCount++;
 							
-							processStatement.setString(fieldCount, (String) tmpMap.get("COMMAND"));
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("%CPU"));
+							processStatement.setString(fieldCount, "" +  tmpMap.get("COMMAND"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("%CPU"));
 							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("%MEM"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("%MEM"));
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("VSZ"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("VSZ"));
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("RSS"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("RSS"));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("TTY"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("TTY"));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("STAT"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("STAT"));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
-							processAttStatement.setString(attFieldCount, (String) tmpMap.get("TIME"));
+							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("TIME"));
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
@@ -1201,7 +1201,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							ArrayList argList = (ArrayList) tmpMap.get("ARGS");
 							for(int y=0; argList != null && y<argList.size(); y++)
 							{
-								processArgStatement.setString(argFieldCount, (String) tmpMap.get("username"));
+								processArgStatement.setString(argFieldCount, "" +  tmpMap.get("username"));
 								argFieldCount++;
 								
 								processArgStatement.setString(argFieldCount, adminEmail);
@@ -1213,22 +1213,22 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 								processArgStatement.setString(argFieldCount, eventName);
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) tmpMap.get("USER"));
+								processArgStatement.setString(argFieldCount, "" +  tmpMap.get("USER"));
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) tmpMap.get("PID"));
+								processArgStatement.setString(argFieldCount, "" +  tmpMap.get("PID"));
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) tmpMap.get("START"));
+								processArgStatement.setString(argFieldCount, "" +  tmpMap.get("START"));
 								argFieldCount++;
 								
-								//processArgStatement.setString(argFieldCount, (String) tmpProcess.get("TIME"));
+								//processArgStatement.setString(argFieldCount, "" +  tmpProcess.get("TIME"));
 								//argFieldCount++;
 								
 								processArgStatement.setInt(argFieldCount, y);
 								argFieldCount++;
 								
-								processArgStatement.setString(argFieldCount, (String) argList.get(y));
+								processArgStatement.setString(argFieldCount, "" +  argList.get(y));
 								argFieldCount++;
 							}
 							
@@ -1306,7 +1306,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							HashMap tmpMap = (HashMap) clickMap.get("window");
 							HashMap tmpProcess = (HashMap) tmpMap.get("ProcessInfo");
 							
-							mouseClickStatement.setString(mouseClickCount, (String) tmpMap.get("username"));
+							mouseClickStatement.setString(mouseClickCount, "" +  tmpMap.get("username"));
 							mouseClickCount++;
 							
 							mouseClickStatement.setString(mouseClickCount, adminEmail);
@@ -1318,16 +1318,16 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							mouseClickStatement.setString(mouseClickCount, eventName);
 							mouseClickCount++;
 							
-							mouseClickStatement.setString(mouseClickCount, (String) tmpProcess.get("USER"));
+							mouseClickStatement.setString(mouseClickCount, "" +  tmpProcess.get("USER"));
 							mouseClickCount++;
 							
-							mouseClickStatement.setString(mouseClickCount, (String) tmpProcess.get("PID"));
+							mouseClickStatement.setString(mouseClickCount, "" +  tmpProcess.get("PID"));
 							mouseClickCount++;
 							
-							mouseClickStatement.setString(mouseClickCount, (String) tmpProcess.get("START"));
+							mouseClickStatement.setString(mouseClickCount, "" +  tmpProcess.get("START"));
 							mouseClickCount++;
 							
-							mouseClickStatement.setString(mouseClickCount, (String) tmpMap.get("WindowID"));
+							mouseClickStatement.setString(mouseClickCount, "" +  tmpMap.get("WindowID"));
 							mouseClickCount++;
 							
 							//if(verbose)
@@ -1335,7 +1335,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							mouseClickStatement.setTimestamp(mouseClickCount, (Timestamp) tmpMap.get("clickedInTime"));
 							mouseClickCount++;
 							
-							mouseClickStatement.setString(mouseClickCount, (String) clickMap.get("type"));
+							mouseClickStatement.setString(mouseClickCount, "" +  clickMap.get("type"));
 							mouseClickCount++;
 							
 							mouseClickStatement.setInt(mouseClickCount, (int) clickMap.get("xLoc"));
@@ -1403,7 +1403,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						{
 							Object[] clickMap = (Object[]) nextScreenshotQueue.poll();
 							
-							screenshotStatement.setString(screenshotCount, (String) clickMap[2]);
+							screenshotStatement.setString(screenshotCount, "" +  clickMap[2]);
 							screenshotCount++;
 							
 							screenshotStatement.setString(screenshotCount, adminEmail);
@@ -1478,7 +1478,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							HashMap tmpMap = (HashMap) pressMap.get("window");
 							HashMap tmpProcess = (HashMap) tmpMap.get("ProcessInfo");
 							
-							keyPressStatement.setString(keyPressCount, (String) tmpMap.get("username"));
+							keyPressStatement.setString(keyPressCount, "" +  tmpMap.get("username"));
 							keyPressCount++;
 							
 							keyPressStatement.setString(keyPressCount, adminEmail);
@@ -1490,16 +1490,16 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							keyPressStatement.setString(keyPressCount, eventName);
 							keyPressCount++;
 							
-							keyPressStatement.setString(keyPressCount, (String) tmpProcess.get("USER"));
+							keyPressStatement.setString(keyPressCount, "" +  tmpProcess.get("USER"));
 							keyPressCount++;
 							
-							keyPressStatement.setString(keyPressCount, (String) tmpProcess.get("PID"));
+							keyPressStatement.setString(keyPressCount, "" +  tmpProcess.get("PID"));
 							keyPressCount++;
 							
-							keyPressStatement.setString(keyPressCount, (String) tmpProcess.get("START"));
+							keyPressStatement.setString(keyPressCount, "" +  tmpProcess.get("START"));
 							keyPressCount++;
 							
-							keyPressStatement.setString(keyPressCount, (String) tmpMap.get("WindowID"));
+							keyPressStatement.setString(keyPressCount, "" +  tmpMap.get("WindowID"));
 							keyPressCount++;
 							
 							//if(verbose)
@@ -1507,7 +1507,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							keyPressStatement.setTimestamp(keyPressCount, (Timestamp) tmpMap.get("clickedInTime"));
 							keyPressCount++;
 							
-							keyPressStatement.setString(keyPressCount, (String) pressMap.get("type"));
+							keyPressStatement.setString(keyPressCount, "" +  pressMap.get("type"));
 							keyPressCount++;
 							
 							keyPressStatement.setObject(keyPressCount, pressMap.get("button"));
