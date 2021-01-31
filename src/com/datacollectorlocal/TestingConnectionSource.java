@@ -20,7 +20,7 @@ public class TestingConnectionSource
 	
 	String userName = "dataCollector";
 	String password = "LFgVMrQ8rqR41StN";
-	String address = "jdbc:mysql://localhost:3306?useLegacyDatetimeCode=false&serverTimezone=UTC&zerodatetimebehavior=Round&useServerPrepStmts=true";
+	String address = "jdbc:mysql://localhost:3306?useLegacyDatetimeCode=false&serverTimezone=UTC&zerodatetimebehavior=Round&useServerPrepStmts=true&allowPublicKeyRetrieval=true";
 	
 	public TestingConnectionSource()
 	{

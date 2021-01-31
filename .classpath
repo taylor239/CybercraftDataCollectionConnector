@@ -39,7 +39,6 @@
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/Java-WebSocket-1.5.1-with-dependencies.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/jnativehook-2.1.0.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/jsp-api.jar"/>
-	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/mysql-connector-java-8.0.21.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/servlet-api.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/tomcat-api.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/tomcat-coyote.jar"/>
@@ -78,5 +77,6 @@
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/oshi-core-5.4.1.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/jna-platform-5.6.0.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/jna-5.6.0.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/mariadb-java-client-2.7.2.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
