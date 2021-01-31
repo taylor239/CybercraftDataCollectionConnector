@@ -33,6 +33,8 @@ public class PortableProcessMonitor implements Runnable
 	private HardwareAbstractionLayer hal;
 	private OperatingSystem os;
 	
+	private HashMap prevParentMap = new HashMap();
+	
 	public PortableProcessMonitor(int timeout)
 	{
 		si = new SystemInfo();
@@ -70,6 +72,8 @@ public class PortableProcessMonitor implements Runnable
 		toFeed = nextStart;
 	}
 	
+	
+	
 	public HashMap toProcMap(OSProcess curProc)
 	{
 		
@@ -87,6 +91,7 @@ public class PortableProcessMonitor implements Runnable
 		myReturn.put("START", curProc.getStartTime());
 		myReturn.put("TIME", curProc.getUpTime());
 		String commandLine = curProc.getCommandLine();
+		myReturn.put("PARENTPID", curProc.getParentProcessID());
 		String[] splited = commandLine.split(" (?=\")|(?<=\")\\s");
 		myReturn.put("COMMAND", curProc.getName());
 		ArrayList args = new ArrayList();
@@ -95,6 +100,18 @@ public class PortableProcessMonitor implements Runnable
 		if(args.size() > 0)
 		{
 			myReturn.put("ARGS", args);
+		}
+		
+		if(!prevParentMap.containsKey(myReturn.get("PARENTPID")))
+		{
+			runRound();
+		}
+		if(prevParentMap.containsKey(myReturn.get("PARENTPID")))
+		{
+			HashMap parentProc = (HashMap) prevParentMap.get(myReturn.get("PARENTPID"));
+			//System.out.println(parentProc.get("USER"));
+			myReturn.put("PARENTUSER", parentProc.get("USER"));
+			myReturn.put("PARENTSTART", parentProc.get("START"));
 		}
 		
 		/*
@@ -146,6 +163,146 @@ public class PortableProcessMonitor implements Runnable
 		*/
 		return myReturn;
 	}
+	
+	public HashMap toProcMapNoCheck(OSProcess curProc)
+	{
+		
+		
+		HashMap myReturn = new HashMap();
+		
+		myReturn.put("USER", curProc.getUser());
+		myReturn.put("PID", curProc.getProcessID());
+		myReturn.put("%CPU", 100d * (curProc.getKernelTime() + curProc.getUserTime()) / curProc.getUpTime());
+		myReturn.put("%MEM", 100d * curProc.getResidentSetSize() / hal.getMemory().getTotal());
+		myReturn.put("VSZ", FormatUtil.formatBytes(curProc.getVirtualSize()));
+		myReturn.put("RSS", FormatUtil.formatBytes(curProc.getResidentSetSize()));
+		myReturn.put("TTY", "");
+		myReturn.put("STAT", curProc.getState().name());
+		myReturn.put("START", curProc.getStartTime());
+		myReturn.put("TIME", curProc.getUpTime());
+		String commandLine = curProc.getCommandLine();
+		myReturn.put("PARENTPID", curProc.getParentProcessID());
+		String[] splited = commandLine.split(" (?=\")|(?<=\")\\s");
+		myReturn.put("COMMAND", curProc.getName());
+		ArrayList args = new ArrayList();
+		Collections.addAll(args, splited);
+		//args.remove(0);
+		if(args.size() > 0)
+		{
+			myReturn.put("ARGS", args);
+		}
+		
+		
+		/*
+		myReturn.put("PID", "" + curProc.pid());
+		Info info = curProc.info();
+		
+		String command = "";
+		if(info.command().isPresent())
+		{
+			command = info.command().get();
+		}
+		myReturn.put("COMMAND", command);
+		
+		String[] arguments = null;
+		ArrayList args = new ArrayList();
+		if(info.arguments().isPresent())
+		{
+			arguments = info.arguments().get();
+			Collections.addAll(args, arguments);
+		}
+		myReturn.put("ARGS", args);
+		
+		String user = "";
+		if(info.user().isPresent())
+		{
+			user = info.user().get();
+		}
+		myReturn.put("USER", user);
+		
+		Instant now = Instant.now();
+		Instant startInstant = null;
+		long diff = 0;
+		if(info.startInstant().isPresent())
+		{
+			startInstant = info.startInstant().get();
+			diff = now.toEpochMilli() - startInstant.toEpochMilli();
+		}
+		myReturn.put("START", "" + startInstant.toEpochMilli());
+		
+		Duration totalCpuDuration = null;
+		double cpuUse = 0;
+		if(info.totalCpuDuration().isPresent())
+		{
+			totalCpuDuration = info.totalCpuDuration().get();
+			cpuUse = (100 * ((double)totalCpuDuration.toMillis() / (double)diff));
+		}
+		myReturn.put("%CPU", "" + cpuUse);
+		
+		*/
+		return myReturn;
+	}
+	
+	public void runRound()
+	{
+		Stream<ProcessHandle> procStream = ProcessHandle.allProcesses();
+		
+		ArrayList output = new ArrayList();
+		HashMap parentLookupMap = new HashMap();
+		
+		List<OSProcess> procs = os.getProcesses();
+		for(int x=0; x < procs.size(); x++)
+		{
+			OSProcess curProc = procs.get(x);
+			if(curProc != null)
+			{
+				HashMap curProcMap = toProcMapNoCheck(curProc);
+				output.add(curProcMap);
+				HashMap keyMap = new HashMap();
+				parentLookupMap.put(curProcMap.get("PID"), curProcMap);
+			}
+		}
+		for(int x=0; x<output.size(); x++)
+		{
+			HashMap curProcMap = (HashMap)output.get(x);
+			if(parentLookupMap.containsKey(curProcMap.get("PARENTPID")))
+			{
+				HashMap parentProc = (HashMap) parentLookupMap.get(curProcMap.get("PARENTPID"));
+				//System.out.println(parentProc.get("USER"));
+				curProcMap.put("PARENTUSER", parentProc.get("USER"));
+				curProcMap.put("PARENTSTART", parentProc.get("START"));
+			}
+		}
+		prevParentMap = parentLookupMap;
+		//HashMap procLookupMap = new HashMap();
+		
+		/*Iterable<ProcessHandle> procIterable = procStream::iterator;
+		for (ProcessHandle curProc : procIterable)
+		{
+			HashMap curProcMap = toProcMap(curProc);
+			output.add(curProcMap);
+			HashMap id = new HashMap();
+			id.put(curProcMap.get("USER"), "USER");
+			id.put(curProcMap.get("PID"), "PID");
+			procLookupMap.put(id, curProcMap);
+			if(osName.contains("linux"))
+			{
+				ArrayList linuxResults = linuxMonitor.getProcesses();
+			}
+		}*/
+		if(toFeed != null)
+		{
+			toFeed.monitorProcesses(output);
+		}
+		try
+		{
+			Thread.currentThread().sleep(time);
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
 
 	@Override
 	public void run()
@@ -153,46 +310,7 @@ public class PortableProcessMonitor implements Runnable
 		running = true;
 		while(running)
 		{
-			Stream<ProcessHandle> procStream = ProcessHandle.allProcesses();
-			
-			ArrayList output = new ArrayList();
-			
-			List<OSProcess> procs = os.getProcesses();
-			for(int x=0; x < procs.size(); x++)
-			{
-				OSProcess curProc = procs.get(x);
-				if(curProc != null)
-				{
-					HashMap curProcMap = toProcMap(curProc);
-					output.add(curProcMap);
-				}
-			}
-			//HashMap procLookupMap = new HashMap();
-			
-			/*Iterable<ProcessHandle> procIterable = procStream::iterator;
-			for (ProcessHandle curProc : procIterable)
-			{
-				HashMap curProcMap = toProcMap(curProc);
-				output.add(curProcMap);
-				HashMap id = new HashMap();
-				id.put(curProcMap.get("USER"), "USER");
-				id.put(curProcMap.get("PID"), "PID");
-				procLookupMap.put(id, curProcMap);
-				if(osName.contains("linux"))
-				{
-					ArrayList linuxResults = linuxMonitor.getProcesses();
-				}
-			}*/
-			
-			toFeed.monitorProcesses(output);
-			try
-			{
-				Thread.currentThread().sleep(time);
-			}
-			catch(Exception e)
-			{
-				e.printStackTrace();
-			}
+			runRound();
 		}
 	}
 	

@@ -480,6 +480,16 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			currentWindowData = newWindow;
 			if(verbose)
 			System.out.println("New window");
+			while(myGenerator == null)
+			{
+				//System.out.println("Still waiting");
+				try {
+					Thread.currentThread().sleep(5);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 			myGenerator.takeScreenshot();
 			return true;
 		}
@@ -780,8 +790,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					
 					if(toInsert > 0)
 					{
-						String processInsert = "INSERT IGNORE INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`) VALUES ";
-						String eachProcessRow = "(?, ?, ?, ?, ?, ?, ?, ?)";
+						String processInsert = "INSERT IGNORE INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`, `parentpid`, `parentuser`, `parentstart`) VALUES ";
+						String eachProcessRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						String processArgInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessArgs` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `numbered`, `arg`) VALUES ";
 						String eachProcessArgRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -955,22 +965,28 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
+							processStatement.setString(fieldCount, "" +  tmpProcess.get("PARENTPID"));
 							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("%MEM"));
 							windowStatement.setString(windowFieldCount, "" +  tmpMap.get("WindowFirstClass"));
 							windowDetailStatement.setInt(windowDetailFieldCount, (int) Math.round((double) tmpMap.get("x")));
+							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
+							processStatement.setString(fieldCount, "" +  tmpProcess.get("PARENTUSER"));
 							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("VSZ"));
 							windowStatement.setString(windowFieldCount, "" +  tmpMap.get("WindowSecondClass"));
 							windowDetailStatement.setInt(windowDetailFieldCount, (int) Math.round((double) tmpMap.get("y")));
+							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
+							processStatement.setString(fieldCount, "" +  tmpProcess.get("PARENTSTART"));
 							processAttStatement.setString(attFieldCount, "" +  tmpProcess.get("RSS"));
 							windowDetailStatement.setInt(windowDetailFieldCount, (int) Math.round((double) tmpMap.get("width")));
+							fieldCount++;
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
@@ -1058,8 +1074,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					
 					if(toInsertProcess > 0)
 					{
-						String processInsert = "INSERT IGNORE INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`) VALUES ";
-						String eachProcessRow = "(?, ?, ?, ?, ?, ?, ?, ?)";
+						String processInsert = "INSERT IGNORE INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`, `parentpid`, `parentuser`, `parentstart`) VALUES ";
+						String eachProcessRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						String processArgInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessArgs` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `numbered`, `arg`) VALUES ";
 						String eachProcessArgRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -1200,17 +1216,23 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
+							processStatement.setString(fieldCount, "" +  tmpMap.get("PARENTPID"));
 							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("%MEM"));
+							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
+							processStatement.setString(fieldCount, "" +  tmpMap.get("PARENTUSER"));
 							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("VSZ"));
+							fieldCount++;
 							attFieldCount++;
 							windowFieldCount++;
 							windowDetailFieldCount++;
 							
+							processStatement.setString(fieldCount, "" +  tmpMap.get("PARENTSTART"));
 							processAttStatement.setString(attFieldCount, "" +  tmpMap.get("RSS"));
+							fieldCount++;
 							attFieldCount++;
 							windowDetailFieldCount++;
 							
@@ -1270,7 +1292,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						}
 						
 						//if(verbose)
-						//	System.out.println(processStatement);
+							System.out.println(processStatement);
 						//if(verbose)
 						//	System.out.println(processAttStatement);
 						
