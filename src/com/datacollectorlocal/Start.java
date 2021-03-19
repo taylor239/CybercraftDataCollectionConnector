@@ -1291,7 +1291,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							//nextQueue.add(tmpMap);
 						}
 						
-						//if(verbose)
+						if(verbose)
 							System.out.println(processStatement);
 						//if(verbose)
 						//	System.out.println(processAttStatement);

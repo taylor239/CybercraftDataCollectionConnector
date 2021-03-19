@@ -193,6 +193,9 @@ public class DataAggregator implements Runnable
 			e.printStackTrace();
 		}
 		
+		
+		long lastFreeMemory = freeMemory();
+		
 		do
 		{
 			long totalObjectCount = 0;
@@ -694,7 +697,23 @@ public class DataAggregator implements Runnable
 						myStmt.setTimestamp(1, maxTime);
 						myStmt.execute();
 					}
-					maxDiff *= 2;
+					
+					long curFreeMemory = freeMemory();
+					long lastSendAllocation = lastFreeMemory - curFreeMemory;
+					long dataSize = totalJSON.length() * 4;
+					
+					System.out.println("Available memory: " + curFreeMemory);
+					
+					if((2 * lastSendAllocation) < (curFreeMemory))
+					{
+						maxDiff *= 2;
+					}
+					else
+					{
+						System.out.println("Not increasing due to memory limit.");
+					}
+					
+					lastFreeMemory = curFreeMemory;
 				}
 				else
 				{
@@ -765,6 +784,13 @@ public class DataAggregator implements Runnable
 			}
 			
 		} while(running);
+	}
+	
+	private long freeMemory()
+	{
+		long allocatedMemory = (Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory());
+		long presumableFreeMemory = Runtime.getRuntime().maxMemory() - allocatedMemory;
+		return presumableFreeMemory;
 	}
 	/*
 	private String toJSON(ArrayList input, String varName)
