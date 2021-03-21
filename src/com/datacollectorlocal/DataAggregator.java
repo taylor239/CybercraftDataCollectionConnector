@@ -704,7 +704,7 @@ public class DataAggregator implements Runnable
 					
 					System.out.println("Available memory: " + curFreeMemory);
 					
-					if((2 * lastSendAllocation) < (curFreeMemory))
+					if(((2 * lastSendAllocation) < (curFreeMemory)) && (dataSize < curFreeMemory))
 					{
 						maxDiff *= 2;
 					}
