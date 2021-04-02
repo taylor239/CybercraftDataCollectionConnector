@@ -135,8 +135,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private HardwareAbstractionLayer hal;
 	private OperatingSystem os;
 	
-	public Start(String user, String event, String admin, int screenshot)
+	private boolean logging = false;
+	
+	public Start(String user, String event, String admin, int screenshot, boolean toLog)
 	{
+		logging = toLog;
 		si = new SystemInfo();
 		hal = si.getHardware();
 		os = si.getOperatingSystem();
@@ -156,7 +159,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		try
 		{
 			Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-			logger.setLevel(Level.OFF);
+			if(!logging)
+			{
+				logger.setLevel(Level.OFF);
+			}
 			GlobalScreen.registerNativeHook();
 			GlobalScreen.addNativeMouseListener(this);
 			GlobalScreen.addNativeKeyListener(this);
@@ -348,6 +354,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			{
 				myReturn.put("taskgui", args[x]);
 			}
+			else if(args[x].equals("-logging"))
+			{
+				myReturn.put("logging", args[x]);
+			}
 			else if(args[x].equals("-screenshot"))
 			{
 				myReturn.put("screenshot", args[x+1]);
@@ -387,6 +397,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		String adminToStart = "default";
 		String eventToStart = "";
 		
+		boolean logging = false;
+		
+		
+		if(configuration.containsKey("logging"))
+		{
+			logging = true;
+		}
 		if(configuration.containsKey("user"))
 		{
 			userToStart = (String) configuration.get("user");
@@ -414,7 +431,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			screenshot = new Integer((String) configuration.get("screenshot"));
 		}
 		
-		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot);
+		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, logging);
 		
 		if(configuration.containsKey("continuous"))
 		{
