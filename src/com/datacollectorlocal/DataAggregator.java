@@ -632,13 +632,15 @@ public class DataAggregator implements Runnable
 				}
 				while(!mySender.isOpen())
 				{
-					mySender.connectBlocking();
-					if(!mySender.isOpen())
-					{
+					
+					//mySender.connectBlocking();
+					//if(!mySender.isOpen())
+					//{
 						mySender = new WebsocketDataSender(new URI(server));
+						mySender.connectBlocking();
 						Thread.currentThread().sleep(5000);
-					}
-					Thread.currentThread().sleep(2500);
+					//}
+					//Thread.currentThread().sleep(2500);
 				}
 				String responseString = mySender.sendWait(compressedString);
 				
