@@ -460,6 +460,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	public synchronized boolean checkNew(ArrayList newWindows)
 	{
+		if(paused)
+		{
+			return false;
+		}
 		HashMap newWindow = null;
 		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
 		for(int x=0; x < newWindows.size(); x++)
