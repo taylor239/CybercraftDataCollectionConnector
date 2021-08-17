@@ -80,5 +80,6 @@
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/mariadb-java-client-2.7.2.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/slf4j-simple-2.0.0-alpha1.jar"/>
 	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/slf4j-api-2.0.0-alpha1.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/oshi-core-5.8.0.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
