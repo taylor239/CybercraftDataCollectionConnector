@@ -626,11 +626,8 @@ public class DataAggregator implements Runnable
 				System.out.println("Sending to: " + server);
 				
 				
-				if(mySender == null)
-				{
-					mySender = new WebsocketDataSender(new URI(server));
-				}
-				while(!mySender.isOpen())
+				
+				while(mySender == null || (!mySender.isOpen()))
 				{
 					
 					//mySender.connectBlocking();
@@ -638,7 +635,11 @@ public class DataAggregator implements Runnable
 					//{
 						mySender = new WebsocketDataSender(new URI(server));
 						mySender.connectBlocking();
-						Thread.currentThread().sleep(5000);
+						if(!mySender.isOpen())
+						{
+							mySender = null;
+							Thread.currentThread().sleep(5000);
+						}
 					//}
 					//Thread.currentThread().sleep(2500);
 				}
