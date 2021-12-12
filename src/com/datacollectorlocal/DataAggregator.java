@@ -633,7 +633,8 @@ public class DataAggregator implements Runnable
 					//mySender.connectBlocking();
 					//if(!mySender.isOpen())
 					//{
-						mySender = new WebsocketDataSender(new URI(server));}
+						mySender = new WebsocketDataSender(new URI(server));
+						
 						if(!mySender.isOpen())
 						{
 							mySender = null;
