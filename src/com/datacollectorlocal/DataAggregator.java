@@ -633,6 +633,10 @@ public class DataAggregator implements Runnable
 					//mySender.connectBlocking();
 					//if(!mySender.isOpen())
 					//{
+						if(mySender != null && mySender.isOpen())
+						{
+							mySender.closeBlocking();
+						}
 						mySender = new WebsocketDataSender(new URI(server));
 						
 						if(!mySender.isOpen())
@@ -728,6 +732,10 @@ public class DataAggregator implements Runnable
 					}
 					if(mySender.isClosed())
 					{
+						if(mySender != null && mySender.isOpen())
+						{
+							mySender.closeBlocking();
+						}
 						mySender = new WebsocketDataSender(new URI(server));
 					}
 					shouldPause = true;
