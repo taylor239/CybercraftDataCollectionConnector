@@ -10,7 +10,7 @@ public class WebsocketDataSender extends WebSocketClient
 {
 	private boolean hasResponse = false;
 	private String response = "";
-	private long timeout = 10000000;
+	private long timeout = 1000000000;
 	private long poll = 1000;
 	//private long maxFrameSize = 60000;
 	
@@ -61,7 +61,7 @@ public class WebsocketDataSender extends WebSocketClient
 			System.out.println(isOpen());
 			if(curTime > timeout || !isOpen())
 			{
-				System.out.println("Timeout");
+				System.out.println("Timeout: " + timeout);
 				break;
 			}
 		}
