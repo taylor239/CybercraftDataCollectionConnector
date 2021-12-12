@@ -721,8 +721,14 @@ public class DataAggregator implements Runnable
 				{
 					System.out.println("Not OK:");
 					System.out.println(responseString);
-					mySender.closeBlocking();
-					mySender = new WebsocketDataSender(new URI(server));
+					if(mySender.isClosing())
+					{
+						mySender.closeBlocking();
+					}
+					if(mySender.isClosed())
+					{
+						mySender = new WebsocketDataSender(new URI(server));
+					}
 					shouldPause = true;
 					maxDiff /= 2L;
 				}
