@@ -1,5 +1,4 @@
 package com.datacollectorlocal;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -102,6 +101,9 @@ public class DataAggregator implements Runnable
 		
 		String tokenSelect = "SELECT * FROM `dataCollection`.`UploadToken` WHERE `username` = ?";
 		
+		String isTimeInvalid = "SELECT `lastTransfer`, UTC_TIMESTAMP(3) AS `currentTime`, `lastTransfer` > UTC_TIMESTAMP(3) AS `isInvalid` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 1";
+		String resetTransfer = "DELETE FROM `dataCollection`.`LastTransfer`";
+		
 		String getLastSubmit = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 1";
 		String transferTimeInsertDefault = "INSERT IGNORE INTO `dataCollection`.`LastTransfer`(`lastTransfer`) VALUES (UTC_TIMESTAMP(3))";
 		String selectScreenshotSizeLimit = "SELECT OCTET_LENGTH(`screenshot`), `insertTimestamp` FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` >= ? ORDER BY `insertTimestamp` ASC";
@@ -142,12 +144,15 @@ public class DataAggregator implements Runnable
 		//	e.printStackTrace();
 		//}
 		
+		
+		
 		try
 		{
 			PreparedStatement maxStatement = preConnection.prepareStatement(currentTimeQuery);
 			ResultSet maxResult = maxStatement.executeQuery();
 			maxResult.next();
 			maxMax = maxResult.getTimestamp(1);
+			
 		}
 		catch(Exception e)
 		{
@@ -797,6 +802,39 @@ public class DataAggregator implements Runnable
 				{
 					this.maxDiff = this.maxDiffFloor;
 				}
+				e.printStackTrace();
+			}
+			
+			System.out.println("Checking timestamp validity:");
+			myConnection = myConnectionSource.getDatabaseConnection();
+			try
+			{
+				PreparedStatement checkTime = myConnection.prepareStatement(isTimeInvalid);
+				ResultSet timeResults = checkTime.executeQuery();
+				if(timeResults.next())
+				{
+					Timestamp lastTransfer = timeResults.getTimestamp("lastTransfer");
+					Timestamp currentTime = timeResults.getTimestamp("currentTime");
+					boolean isInvalid = timeResults.getBoolean("isInvalid");
+					System.out.println("Last Transfer: " + lastTransfer);
+					System.out.println("Current Time: " + currentTime);
+					System.out.println("Is Invalid? " + isInvalid);
+					timeResults.close();
+					checkTime.close();
+					if(isInvalid)
+					{
+						myConnection.prepareStatement(resetTransfer).execute();
+					}
+				}
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+			try {
+				myConnection.close();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
