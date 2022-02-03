@@ -91,7 +91,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private PortableActiveWindowMonitor myMonitor = new PortableActiveWindowMonitor();
 	private String windowID = "";
 	private String windowName = "";
-	private double windowX = -1;
+	private double windowX = -1; 
 	private double windowY = -1;
 	private double windowWidth = -1;
 	private double windowHeight = -1;
@@ -137,7 +137,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private boolean logging = false;
 	
-	public Start(String user, String event, String admin, int screenshot, boolean toLog)
+	public Start(String user, String event, String admin, int screenshot, int process, boolean toLog)
 	{
 		logging = toLog;
 		si = new SystemInfo();
@@ -146,6 +146,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		
 		screenshotTimeout = screenshot;
+		processTimeout = process;
 		
 		sessionToken = UUID.randomUUID().toString();
 		userName = user;
@@ -363,6 +364,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				myReturn.put("screenshot", args[x+1]);
 				x++;
 			}
+			else if(args[x].equals("-process"))
+			{
+				myReturn.put("process", args[x+1]);
+				x++;
+			}
 			else if(args[x].equals("-continuous"))
 			{
 				myReturn.put("continuous", true);
@@ -430,8 +436,14 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			screenshot = new Integer((String) configuration.get("screenshot"));
 		}
-		
-		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, logging);
+		int process = 20000;
+
+		if(configuration.containsKey("process"))
+		{
+			process = new Integer((String) configuration.get("process"));
+		}
+				
+		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging);
 		
 		if(configuration.containsKey("continuous"))
 		{
