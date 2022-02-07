@@ -129,7 +129,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private boolean cleanedUp = false;
 	
 	private static String[] programArgs = new String[0];
-	private static boolean hasBeenLaunched = false;
+    private static boolean hasBeenLaunched = false;
 	
 	private SystemInfo si;
 	private HardwareAbstractionLayer hal;
