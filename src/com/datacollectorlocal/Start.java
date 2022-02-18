@@ -86,6 +86,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 {
 	boolean verbose = false;
 	
+	boolean metrics = false;
+	
 	private Thread myThread;
 	private static ArrayList windowsToClose = new ArrayList();
 	private PortableActiveWindowMonitor myMonitor = new PortableActiveWindowMonitor();
@@ -101,6 +103,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private ConcurrentLinkedQueue screenshotsToWrite = new ConcurrentLinkedQueue();
 	private ConcurrentLinkedQueue keysToWrite = new ConcurrentLinkedQueue();
 	private ConcurrentLinkedQueue processesToWrite = new ConcurrentLinkedQueue();
+	private ConcurrentLinkedQueue metricsToWrite = new ConcurrentLinkedQueue();
 	private int screenshotTimeout = 10000;
 	private ScreenshotGenerator myGenerator;
 	private int processTimeout = 20000;
@@ -137,8 +140,9 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private boolean logging = false;
 	
-	public Start(String user, String event, String admin, int screenshot, int process, boolean toLog)
+	public Start(String user, String event, String admin, int screenshot, int process, boolean toLog, boolean toMetric)
 	{
+		metrics = toMetric;
 		logging = toLog;
 		si = new SystemInfo();
 		hal = si.getHardware();
@@ -359,6 +363,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			{
 				myReturn.put("logging", args[x]);
 			}
+			else if(args[x].equals("-metrics"))
+			{
+				myReturn.put("metrics", args[x]);
+			}
 			else if(args[x].equals("-screenshot"))
 			{
 				myReturn.put("screenshot", args[x+1]);
@@ -403,6 +411,15 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		String adminToStart = "default";
 		String eventToStart = "";
 		
+		
+		boolean metrics = false;
+		
+		
+		if(configuration.containsKey("metrics"))
+		{
+			metrics = true;
+		}
+		
 		boolean logging = false;
 		
 		
@@ -434,16 +451,16 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		int screenshot = 10000;
 		if(configuration.containsKey("screenshot"))
 		{
-			screenshot = new Integer((String) configuration.get("screenshot"));
+			screenshot = Integer.parseInt((String) configuration.get("screenshot"));
 		}
 		int process = 20000;
 
 		if(configuration.containsKey("process"))
 		{
-			process = new Integer((String) configuration.get("process"));
+			process = Integer.parseInt((String) configuration.get("process"));
 		}
 				
-		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging);
+		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging, metrics);
 		
 		if(configuration.containsKey("continuous"))
 		{
@@ -703,6 +720,52 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		keysToWrite.add(keyToWrite);
 	}
 	
+	public void recordMetric(String metricName, double metricValue, String metricUnit)
+	{
+		if(paused)
+		{
+			return;
+		}
+		
+		HashMap metricToWrite = new HashMap();
+		
+		metricToWrite.put("metricName", metricName);
+		metricToWrite.put("recordedTimestamp", new Timestamp(new Date().getTime()-timeDifference));
+		metricToWrite.put("metricValue1", metricValue);
+		metricToWrite.put("metricUnit1", metricUnit);
+		metricToWrite.put("metricValue2", 0.0);
+		metricToWrite.put("metricUnit2", "None");
+		metricToWrite.put("username", userName);
+		
+		System.out.println("Recording metric: ");
+		System.out.println(metricToWrite);
+		
+		metricsToWrite.add(metricToWrite);
+	}
+	
+	public void recordMetric(String metricName, double metricValue1, String metricUnit1, double metricValue2, String metricUnit2)
+	{
+		if(paused)
+		{
+			return;
+		}
+		
+		HashMap metricToWrite = new HashMap();
+		
+		metricToWrite.put("metricName", metricName);
+		metricToWrite.put("recordedTimestamp", new Timestamp(new Date().getTime()-timeDifference));
+		metricToWrite.put("metricValue1", metricValue1);
+		metricToWrite.put("metricUnit1", metricUnit1);
+		metricToWrite.put("metricValue2", metricValue2);
+		metricToWrite.put("metricUnit2", metricUnit2);
+		metricToWrite.put("username", userName);
+		
+		System.out.println("Recording metric: ");
+		System.out.println(metricToWrite);
+		
+		metricsToWrite.add(metricToWrite);
+	}
+	
 	public void monitorProcesses(ArrayList processes)
 	{
 		if(paused)
@@ -739,6 +802,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	public void run()
 	{
 		running = true;
+		System.out.println("Running in session " + sessionToken);
 		//if(true)
 		//	return;
 		Connection myConnection = connectionSource.getDatabaseConnection();
@@ -759,6 +823,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		int count = 0;
 		do
 		{
+			long startWriteout = System.currentTimeMillis();
+			long timeTaken = -1;
 			count++;
 			try
 			{
@@ -784,7 +850,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				checkNew(myMonitor.getTopWindow(timeDifference));
 				if(count > 5 && !windowsToWrite.isEmpty() || !clicksToWrite.isEmpty() || !screenshotsToWrite.isEmpty())
 				{
-					
+					long startEventInsert = System.currentTimeMillis();
 					if(verbose)
 						System.out.println("Recording user JIC");
 					
@@ -809,17 +875,25 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					userStatement.execute();
 					userStatement.close();
 					
+					long endEventInsert = System.currentTimeMillis() - startEventInsert;
+					recordMetric("Event Data Write Time", endEventInsert, "ms");
+					
+					
+					long startWindowInsert = System.currentTimeMillis();
 					
 					if(verbose)
 						System.out.println("Time to record " + windowsToWrite.size() + " window changes");
+					
 					
 					int toInsert = windowsToWrite.size();
 					int clickToInsert = clicksToWrite.size();
 					int screenshotsToInsert = screenshotsToWrite.size();
 					int keyToInsert = keysToWrite.size();
+					int metricToInsert = metricsToWrite.size();
 					int toInsertProcess = processesToWrite.size();
 					ConcurrentLinkedQueue countQueue = new ConcurrentLinkedQueue();
 					//ConcurrentLinkedQueue nextQueue = new ConcurrentLinkedQueue();
+					
 					
 					if(toInsert > 0)
 					{
@@ -1101,6 +1175,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						
 					}
 					
+					long endWindowInsert = System.currentTimeMillis() - startWindowInsert;
+					recordMetric("Window Write Time", endWindowInsert, "ms");
 					
 					ConcurrentLinkedQueue nextProcessQueue = new ConcurrentLinkedQueue();
 					//ConcurrentLinkedQueue nextQueue = new ConcurrentLinkedQueue();
@@ -1121,6 +1197,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						
 						boolean hasArgs = false;
 						
+						if(verbose)
+							System.out.println("Time to record " + processesToWrite.size() + " processes");
 						
 						boolean argsStarted = false;
 						for(int x=0; x<toInsertProcess; x++)
@@ -1343,6 +1421,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						
 					}
 					
+					
 					//toWrite.clear();
 					
 					if(verbose)
@@ -1522,7 +1601,6 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					
 					if(keyToInsert > 0)
 					{
-						String allTyped = "";
 						ConcurrentLinkedQueue nextPressQueue = new ConcurrentLinkedQueue();
 						
 						String keyPressInsert = "INSERT IGNORE INTO `dataCollection`.`KeyboardInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `button`, `inputTime` ) VALUES ";
@@ -1616,6 +1694,91 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							//System.out.println("Inserting " + allTyped);
 							//System.out.println(keyPressStatement);
 						}
+						
+						
+						
+					
+					}
+					
+					if(verbose)
+						System.out.println("Time to record " + metricsToWrite.size() + " metrics");
+					
+					if(metricToInsert > 0)
+					{
+						ConcurrentLinkedQueue nextMetricQueue = new ConcurrentLinkedQueue();
+						
+						String metricInsert = "INSERT IGNORE INTO `dataCollection`.`PerformanceMetrics`(`event`, `adminEmail`, `username`, `session`, `metricName`, `metricValue1`, `metricUnit1`, `metricValue2`, `metricUnit2`, `recordedTimestamp`) VALUES ";
+						String metricRow = "(?,?,?,?,?,?,?,?,?,?)";
+						
+						for(int x=0; x < metricToInsert; x++)
+						{
+							HashMap metricMap = (HashMap) metricsToWrite.poll();
+							{
+								nextMetricQueue.add(metricMap);
+								if(x==0)
+								{
+									metricInsert += metricRow;
+								}
+								else
+								{
+									metricInsert += ", " + metricRow;
+								}
+							}
+						}
+						
+						if(verbose)
+							System.out.println(metricInsert);
+						
+						PreparedStatement metricsStatement = myConnection.prepareStatement(metricInsert);
+						
+						int metricsCount = 1;
+						
+						for(int x=0; metricToInsert > 0 && x < metricToInsert; x++)
+						{
+							HashMap metricMap = (HashMap) nextMetricQueue.poll();
+							
+							metricsStatement.setString(metricsCount, eventName);
+							metricsCount++;
+							
+							metricsStatement.setString(metricsCount, adminEmail);
+							metricsCount++;
+							
+							metricsStatement.setString(metricsCount, "" +  metricMap.get("username"));
+							metricsCount++;
+							
+							metricsStatement.setString(metricsCount, sessionToken);
+							metricsCount++;
+							
+							metricsStatement.setString(metricsCount, "" +  metricMap.get("metricName"));
+							metricsCount++;
+							
+							metricsStatement.setDouble(metricsCount, (Double)metricMap.get("metricValue1"));
+							metricsCount++;
+							
+							metricsStatement.setString(metricsCount, "" +  metricMap.get("metricUnit1"));
+							metricsCount++;
+							
+							metricsStatement.setDouble(metricsCount, (Double)metricMap.get("metricValue2"));
+							metricsCount++;
+							
+							metricsStatement.setString(metricsCount, "" +  metricMap.get("metricUnit2"));
+							metricsCount++;
+							
+							metricsStatement.setTimestamp(metricsCount, (Timestamp) metricMap.get("recordedTimestamp"));
+							metricsCount++;
+							
+							//allTyped += pressMap.get("button");
+							
+							
+						}
+						
+						if(metricToInsert > 0)
+						{
+							metricsStatement.execute();
+							metricsStatement.close();
+							//System.out.println("Inserting " + allTyped);
+							//System.out.println(keyPressStatement);
+						}
 					}
 					
 					//presssToWrite.clear();
@@ -1624,6 +1787,9 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					myConnection.commit();
 					myConnection.close();
 				}
+				
+				timeTaken = System.currentTimeMillis() - startWriteout;
+				
 				Thread.sleep(1000);
 				//if(verbose)
 				//System.out.println("Loop");
@@ -1632,11 +1798,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			{
 				e.printStackTrace();
 			}
-			if(new Random().nextInt() % 20 == 0)
-			{
+			recordMetric("Total Writeout Time", timeTaken, "ms");
+			//if(new Random().nextInt() % 20 == 0)
+			//{
 				//update();
-				System.out.println("Running in session " + sessionToken);
-			}
+			
+			//	System.out.println("Running in session " + sessionToken);
+			//}
 			System.gc();
 		} while(running);
 		cleanedUp = true;

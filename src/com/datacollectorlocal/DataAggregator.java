@@ -119,6 +119,7 @@ public class DataAggregator implements Runnable
 		String processAttributesSelect = "SELECT * FROM `dataCollection`.`ProcessAttributes` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String mouseInputSelect = "SELECT * FROM `dataCollection`.`MouseInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String keyboardInputSelect = "SELECT * FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
+		String metricsSelect = "SELECT * FROM `dataCollection`.`PerformanceMetrics` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String taskSelect = "SELECT * FROM `dataCollection`.`Task` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String taskEventSelect = "SELECT * FROM `dataCollection`.`TaskEvent` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		
@@ -570,6 +571,27 @@ public class DataAggregator implements Runnable
 					taskEventList.add(curMap);
 				}
 				totalObjects.put("TaskEvent", taskEventList);
+				
+				
+				myStmt = myConnection.prepareStatement(metricsSelect);
+				myStmt.setTimestamp(1, curTimestamp);
+				myStmt.setTimestamp(2, lastTimestamp);
+				myResults = myStmt.executeQuery();
+				ArrayList metricsList = new ArrayList();
+				while(myResults.next())
+				{
+					HashMap curMap = new HashMap();
+					
+					int colCount = myResults.getMetaData().getColumnCount();
+					for(int x=1; x<colCount + 1; x++)
+					{
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
+					}
+					
+					metricsList.add(curMap);
+				}
+				totalObjects.put("PerformanceMetrics", metricsList);
+				
 				
 				Iterator myIter = totalObjects.entrySet().iterator();
 				while(myIter.hasNext())

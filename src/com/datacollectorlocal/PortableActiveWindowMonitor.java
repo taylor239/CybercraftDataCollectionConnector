@@ -83,12 +83,14 @@ public class PortableActiveWindowMonitor
 		}
 		
 		HashMap topMap = ((HashMap)activeMap.get(maxOrder));
+		if(topMap != null)
+		{
 		while(topMap.containsKey("Parent"))
 		{
 			topMap = (HashMap) topMap.get("Parent");
 		}
 		topMap.put("IsFocus", "1");
-		
+		}
 		return myReturn;
 	}
 }
