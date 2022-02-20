@@ -117,6 +117,7 @@ public class DataAggregator implements Runnable
 		String processSelect = "SELECT * FROM `dataCollection`.`Process` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String processArgsSelect = "SELECT * FROM `dataCollection`.`ProcessArgs` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String processAttributesSelect = "SELECT * FROM `dataCollection`.`ProcessAttributes` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
+		String processThreadsSelect = "SELECT * FROM `dataCollection`.`ProcessThreads` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String mouseInputSelect = "SELECT * FROM `dataCollection`.`MouseInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String keyboardInputSelect = "SELECT * FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
 		String metricsSelect = "SELECT * FROM `dataCollection`.`PerformanceMetrics` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
@@ -495,6 +496,25 @@ public class DataAggregator implements Runnable
 					processAttributesList.add(curMap);
 				}
 				totalObjects.put("ProcessAttributes", processAttributesList);
+				
+				myStmt = myConnection.prepareStatement(processThreadsSelect);
+				myStmt.setTimestamp(1, curTimestamp);
+				myStmt.setTimestamp(2, lastTimestamp);
+				myResults = myStmt.executeQuery();
+				ArrayList processThreadsList = new ArrayList();
+				while(myResults.next())
+				{
+					HashMap curMap = new HashMap();
+					
+					int colCount = myResults.getMetaData().getColumnCount();
+					for(int x=1; x<colCount + 1; x++)
+					{
+						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
+					}
+					
+					processThreadsList.add(curMap);
+				}
+				totalObjects.put("ProcessThreads", processThreadsList);
 				
 				myStmt = myConnection.prepareStatement(mouseInputSelect);
 				myStmt.setTimestamp(1, curTimestamp);
