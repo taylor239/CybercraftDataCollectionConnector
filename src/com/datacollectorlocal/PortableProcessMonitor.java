@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.stream.Stream;
@@ -32,7 +33,7 @@ public class PortableProcessMonitor implements Runnable
 	private String osName = "";
 	//private LinuxProcessMonitor linuxMonitor;
 	
-	private HashSet prevProcSet = new HashSet();
+	private HashMap prevProcSet = new HashMap();
 	
 	private SystemInfo si;
 	private HardwareAbstractionLayer hal;
@@ -142,6 +143,7 @@ public class PortableProcessMonitor implements Runnable
 		
 		if(!prevParentMap.containsKey(myReturn.get("PARENTPID")))
 		{
+			//System.out.println("Running a triggered round");
 			runRound();
 		}
 		if(prevParentMap.containsKey(myReturn.get("PARENTPID")))
@@ -348,32 +350,13 @@ public class PortableProcessMonitor implements Runnable
 		
 		if(diff)
 		{
-			HashSet nextProcSet = (HashSet) prevProcSet.clone();
-			//System.out.println("Total: " + output.size());
-			//System.out.println("Old: " + prevProcSet.size());
+			HashMap nextProcSet = new HashMap(); //(HashSet) prevProcSet.clone();
 			
-			/*
-			if(prevProcSet.iterator().hasNext())
-			{
-				HashMap firstMap = (HashMap)output.get(0);
-				HashMap secondMap = (HashMap)(prevProcSet.iterator().next());
-				System.out.println(firstMap.keySet());
-				System.out.println(secondMap.keySet());
-				System.out.println(firstMap.getClass());
-				System.out.println(secondMap.getClass());
-				Iterator curIter = firstMap.keySet().iterator();
-				while(curIter.hasNext())
-				{
-					String nextKey = (String) curIter.next();
-					System.out.println(nextKey);
-					System.out.println(firstMap.get(nextKey));
-					System.out.println(secondMap.get(nextKey));
-				}
-			}
-			*/
+			int newCount = 0;
+			int updateCount = 0;
+			int neutralCount = 0;
 			
 			finalOutput = new ArrayList();
-			HashMap finalOutputMap = new HashMap();
 			
 			// This gets all new processes, more efficient to just
 			// loop rather than do the more elegant set compare
@@ -381,67 +364,78 @@ public class PortableProcessMonitor implements Runnable
 			// this entire method to sets at some point)
 			for(int x = 0; x < output.size(); x++)
 			{
-				if(!prevProcSet.contains(output.get(x)))
+				// Prev map does not even have the key for this
+				// process, so we know it is absolutely new.
+				if(!prevProcSet.containsKey(((ProcessMap)output.get(x)).getKey()))
 				{
 					//System.out.println("New:");
 					//System.out.println(output.get(x));
-					finalOutputMap.put(((ProcessMap) output.get(x)).getKey(), output.get(x));
-					finalOutput.add(output.get(x));
-					nextProcSet.add(output.get(x));
+					//finalOutputMap.put(((ProcessMap) output.get(x)).getKey(), output.get(x));
+					finalOutput.add(((ProcessMap)output.get(x)).clone());
+					nextProcSet.put(((ProcessMap)output.get(x)).getKey(), output.get(x));
+					
+					newCount++;
 				}
-			}
-			
-			//System.out.println("New: " + finalOutput.size());
-			
-			// This gives a prevProcSet that is processes that died or
-			// had significantly different CPU or MEM.
-			//prevProcSet.removeAll(output);
-			
-			// Let's clone this here to keep older, unchanged values.
-			// This prevents small CPU/MEM creep.
-			
-			for(int x=0; x < output.size(); x++)
-			{
-				if(prevProcSet.contains(output.get(x)))
+				// We know that this process is equal to the prev entry within
+				// margin of error so we save the initial process so that we
+				// calculate significance from the last changed value. This
+				// is not a new entry so it does not need to be written.
+				else if(prevProcSet.get(((ProcessMap)output.get(x)).getKey()).equals(output.get(x)))
 				{
-					prevProcSet.remove(output.get(x));
+					nextProcSet.put(((ProcessMap)output.get(x)).getKey(), prevProcSet.get(((ProcessMap)output.get(x)).getKey()));
+					
+					neutralCount++;
 				}
-			}
-			
-			
-			//System.out.println("Died: " + prevProcSet.size());
-			//System.out.println(prevProcSet);
-			
-			Iterator prevProcIter = prevProcSet.iterator();
-			int diedCount = 0;
-			while(prevProcIter.hasNext())
-			{
-				
-				ProcessMap curProc = (ProcessMap) prevProcIter.next();
-				
-				if(finalOutputMap.containsKey(curProc.getKey()))
-				{
-					nextProcSet.remove(curProc);
-					nextProcSet.add(curProc);
-					//System.out.println("Updated: " + curProc.getKey() + " " + curProc.get("COMMAND"));
-				}
+				// We know that there was a previous process entry, but the new
+				// entry is significantly different CPU or MEM so we add it to
+				// update.
 				else
 				{
-					diedCount++;
+					//finalOutputMap.put(((ProcessMap) output.get(x)).getKey(), output.get(x));
+					finalOutput.add(((ProcessMap)output.get(x)).clone());
+					nextProcSet.put(((ProcessMap)output.get(x)).getKey(), output.get(x));
 					
-					nextProcSet.remove(curProc);
-					
-					curProc = (ProcessMap) curProc.clone();
-					
-					curProc.put("STAT", "DIED");
-					finalOutput.add(curProc);
-					//System.out.println("Died: " + curProc.getKey() + " " + curProc.get("COMMAND"));
+					updateCount++;
 				}
 			}
 			
-			//System.out.println("Died Count: " + diedCount);
+			// Final output now has all new and changed values, but we still
+			// need to figure out which processes have died.  We iterate
+			// through the previous processes to see what is missing.
 			
-			//System.out.println("Final: " + finalOutput.size());
+			int deathCount = 0;
+			Iterator prevProcIter = prevProcSet.entrySet().iterator();
+			while(prevProcIter.hasNext())
+			{
+				Entry nextEntry = (Entry) prevProcIter.next();
+				ProcessMap curProc = (ProcessMap) nextEntry.getValue();
+				String curKey = (String) nextEntry.getKey();
+				
+				if(!nextProcSet.containsKey(curKey))
+				{
+					// The new, updated, or no-change set does not
+					// have this process, so it must have died.
+					curProc = (ProcessMap) curProc.clone();
+					curProc.put("STAT", "DIED");
+					finalOutput.add(curProc);
+					
+					deathCount++;
+				}
+			}
+			
+			//System.out.println("Total Count: " + output.size());
+			
+			//System.out.println("New Count: " + newCount);
+			
+			//System.out.println("Update Count: " + updateCount);
+			
+			//System.out.println("No Change Count: " + neutralCount);
+			
+			//System.out.println("Death Count: " + deathCount);
+			
+			//System.out.println("Final Count: " + finalOutput.size());
+			
+			//System.out.println();
 			
 			prevProcSet = nextProcSet;
 		}
@@ -514,6 +508,6 @@ public class PortableProcessMonitor implements Runnable
 	
 	public static void main(String[] args)
 	{
-		PortableProcessMonitor myMonitor = new PortableProcessMonitor(5000, true, true);
+		PortableProcessMonitor myMonitor = new PortableProcessMonitor(100, true, true);
 	}
 }

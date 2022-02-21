@@ -956,13 +956,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						String eachProcessArgRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						//int argCount = 0;
 						
-						String processAttInsert = "INSERT INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
+						String processAttInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
 						String eachProcessAttRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
-						String windowInsert = "INSERT INTO `dataCollection`.`Window` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `firstClass`, `secondClass`) VALUES ";
+						String windowInsert = "INSERT IGNORE INTO `dataCollection`.`Window` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `firstClass`, `secondClass`) VALUES ";
 						String eachWindowRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
-						String windowDetailInsert = "INSERT INTO `dataCollection`.`WindowDetails` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `x`, `y`, `width`, `height`, `name`, `timeChanged`, `active`) VALUES ";
+						String windowDetailInsert = "INSERT IGNORE INTO `dataCollection`.`WindowDetails` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `x`, `y`, `width`, `height`, `name`, `timeChanged`, `active`) VALUES ";
 						String eachWindowDetailRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						boolean hasArgs = false;
@@ -1246,10 +1246,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						String eachProcessArgRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						//int argCount = 0;
 						
-						String processAttInsert = "INSERT INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
+						String processAttInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
 						String eachProcessAttRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
-						String processThreadInsert = "INSERT INTO `dataCollection`.`ProcessThreads` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `name`, `tid`, `tstate`, `tcpu`, `minorfault`, `majorfault`, `tstart`, `priority`, `timestamp`) VALUES ";
+						String processThreadInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessThreads` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `name`, `tid`, `tstate`, `tcpu`, `minorfault`, `majorfault`, `tstart`, `priority`, `timestamp`) VALUES ";
 						String eachProcessThreadRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						
@@ -1587,7 +1587,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextClickQueue = new ConcurrentLinkedQueue();
 						
-						String mouseClickInsert = "INSERT INTO `dataCollection`.`MouseInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `xLoc`, `yLoc`, `inputTime`) VALUES ";
+						String mouseClickInsert = "INSERT IGNORE INTO `dataCollection`.`MouseInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `xLoc`, `yLoc`, `inputTime`) VALUES ";
 						String mouseClickRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < clickToInsert; x++)
@@ -1692,7 +1692,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextScreenshotQueue = new ConcurrentLinkedQueue();
 						
-						String screenshotInsert = "INSERT INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`) VALUES ";
+						String screenshotInsert = "INSERT IGNORE INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`) VALUES ";
 						String screenshotRow = "(?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < screenshotsToInsert; x++)
@@ -1771,7 +1771,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextPressQueue = new ConcurrentLinkedQueue();
 						
-						String keyPressInsert = "INSERT INTO `dataCollection`.`KeyboardInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `button`, `inputTime` ) VALUES ";
+						String keyPressInsert = "INSERT IGNORE INTO `dataCollection`.`KeyboardInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `button`, `inputTime` ) VALUES ";
 						String keyPressRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < keyToInsert; x++)
@@ -1882,7 +1882,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextMetricQueue = new ConcurrentLinkedQueue();
 						
-						String metricInsert = "INSERT INTO `dataCollection`.`PerformanceMetrics`(`event`, `adminEmail`, `username`, `session`, `metricName`, `metricValue1`, `metricUnit1`, `metricValue2`, `metricUnit2`, `recordedTimestamp`) VALUES ";
+						String metricInsert = "INSERT IGNORE INTO `dataCollection`.`PerformanceMetrics`(`event`, `adminEmail`, `username`, `session`, `metricName`, `metricValue1`, `metricUnit1`, `metricValue2`, `metricUnit2`, `recordedTimestamp`) VALUES ";
 						String metricRow = "(?,?,?,?,?,?,?,?,?,?)";
 						
 						for(int x=0; x < metricToInsert; x++)

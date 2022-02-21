@@ -1,11 +1,15 @@
 package com.datacollectorlocal;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 
+
+// I should probably abstract this to an ApproximageEqualsHashMap
+// with customizable sets...
 
 public class ProcessMap extends HashMap
 {
@@ -39,6 +43,8 @@ public class ProcessMap extends HashMap
 		{
 			ignoreSet = new HashSet();
 			ignoreSet.add("TIME");
+			ignoreSet.add("username");
+			ignoreSet.add("timestamp");
 		}
 		if(sizeSet == null)
 		{
@@ -144,5 +150,21 @@ public class ProcessMap extends HashMap
 	public String getKey()
 	{
 		return id + "_" + this.get("START") + "_" + this.get("USER");
+	}
+	
+	public Object clone()
+	{
+		ProcessMap myReturn = (ProcessMap) super.clone();
+		
+		if(myReturn.containsKey("THREADS"))
+		{
+			ArrayList threadList = (ArrayList) myReturn.get("THREADS");
+			for(int x = 0; x < threadList.size(); x++)
+			{
+				((HashMap)threadList.get(x)).put("PARENT", myReturn);
+			}
+		}
+		
+		return myReturn;
 	}
 }
