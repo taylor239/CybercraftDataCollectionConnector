@@ -83,7 +83,7 @@ import oshi.software.os.OperatingSystem;
 
 
 
-public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener, PauseListener
+public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener, PauseListener, MetricListener
 {
 	boolean verbose = false;
 	
@@ -168,7 +168,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			eventName = event;
 		}
-		myThread = new Thread(this);
+		myThread = new Thread(this, "mainMonitorThread");
 		myThread.start();
 		try
 		{
@@ -186,6 +186,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			e.printStackTrace();
 		}
 		myGenerator = new ScreenshotGenerator(screenshotTimeout);
+		myGenerator.addMetricListener(this);
 		myGenerator.addScreenshotListener(this);
 		myProcessMonitor = new PortableProcessMonitor(processTimeout, true, threads);
 		myProcessMonitor.setStart(this);
@@ -511,6 +512,12 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		while(myStart.running)
 		{
 			//Don't give up control
+			try {
+				Thread.currentThread().sleep(5000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -525,6 +532,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return false;
 		}
+		long metricTime = System.currentTimeMillis();
 		HashMap newWindow = null;
 		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
 		for(int x=0; x < newWindows.size(); x++)
@@ -537,6 +545,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		if(newWindow == null)
 		{
+			metricTime = metricTime - System.currentTimeMillis();
+			recordMetric("Window Detection", metricTime, "ms");
 			return false;
 		}
 		if(!("" + newWindow.get("WindowID")).equals(windowID) || !("" + newWindow.get("WindowTitle")).equals(windowName) || !((double)newWindow.get("x") == windowX) || !((double)newWindow.get("y") == windowY || !((double)newWindow.get("width") == windowWidth) || !((double)newWindow.get("height") == windowHeight)))
@@ -561,7 +571,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			}
 			currentWindowData = newWindow;
 			if(verbose)
-			System.out.println("New window");
+				System.out.println("New window");
+			
+			metricTime = metricTime - System.currentTimeMillis();
+			recordMetric("Window Detection", metricTime, "ms");
 			while(myGenerator == null)
 			{
 				//System.out.println("Still waiting");

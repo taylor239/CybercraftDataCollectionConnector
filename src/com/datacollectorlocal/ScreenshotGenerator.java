@@ -20,19 +20,26 @@ public class ScreenshotGenerator implements Runnable
 	private Thread myThread;
 	private boolean running = false;
 	
+	private ArrayList myMetricListeners = new ArrayList();
+	
 	public ScreenshotGenerator(int timeout)
 	{
 		sleepTime = timeout;
 		try
 		{
 			myRobot = new Robot();
-			myThread = new Thread(this);
+			myThread = new Thread(this, "screenshotGenerator");
 			myThread.start();
 		}
 		catch(Exception e)
 		{
 			e.printStackTrace();
 		}
+	}
+	
+	public void addMetricListener(MetricListener toAdd)
+	{
+		myMetricListeners.add(toAdd);
 	}
 	
 	public void addScreenshotListener(ScreenshotListener newListener)
@@ -51,7 +58,14 @@ public class ScreenshotGenerator implements Runnable
 		running = true;
 		while(running)
 		{
+			long metricTime = System.currentTimeMillis();
 			takeScreenshot();
+			metricTime = metricTime - System.currentTimeMillis();
+			for(int x = 0; x < myMetricListeners.size(); x++)
+			{
+				MetricListener curListener = (MetricListener) myMetricListeners.get(x);
+				curListener.recordMetric("Screenshot", metricTime, "ms");
+			}
 			try
 			{
 				Thread.sleep(sleepTime);

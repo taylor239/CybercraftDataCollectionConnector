@@ -90,7 +90,7 @@ public class DataAggregator implements Runnable
 		server = serverAddr;
 		myAdminEmail = admin;
 		myConnectionSource = new TestingConnectionSource();
-		myThread = new Thread(this);
+		myThread = new Thread(this, "dataAggregator");
 		myThread.start();
 	}
 	
