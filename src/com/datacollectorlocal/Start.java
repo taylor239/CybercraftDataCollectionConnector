@@ -2007,12 +2007,15 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	}
 
 	@Override
-	public void getScreenshotEvent(Date timeTaken, Image screenshot)
+	public synchronized void getScreenshotEvent(Date timeTaken, Image screenshot)
 	{
 		if(paused)
 		{
 			return;
 		}
+		
+		Timestamp newTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		
 		checkNew(myMonitor.getTopWindow(timeDifference));
 		Object[] myPair = new Object[3];
 		
@@ -2033,7 +2036,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), jpegParams);
 			
 			
-			myPair[0] = new Timestamp(timeTaken.getTime());
+			myPair[0] = newTimestamp;//new Timestamp(timeTaken.getTime());
 			myPair[1] = toByte.toByteArray();
 			myPair[2] = userName;
 			screenshotsToWrite.add(myPair);
