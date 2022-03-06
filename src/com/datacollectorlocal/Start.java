@@ -64,17 +64,13 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 //import org.apache.tomcat.jni.Thread;
-import org.jnativehook.GlobalScreen;
-import org.jnativehook.NativeHookException;
-import org.jnativehook.NativeInputEvent;
-//import org.jnativehook.dispatcher.SwingDispatchService;
-import org.jnativehook.keyboard.NativeKeyEvent;
-import org.jnativehook.keyboard.NativeKeyListener;
-import org.jnativehook.mouse.NativeMouseEvent;
-import org.jnativehook.mouse.NativeMouseInputListener;
-import org.jnativehook.mouse.NativeMouseWheelEvent;
-import org.jnativehook.mouse.NativeMouseWheelListener;
 
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
+import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
+import com.github.kwhat.jnativehook.mouse.NativeMouseInputListener;
 import com.google.gson.Gson;
 
 import oshi.SystemInfo;
@@ -596,6 +592,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeMouseClicked(NativeMouseEvent arg0)
 	{
+		System.out.println("Got a mouse input");
 		if(paused)
 		{
 			return;
@@ -714,6 +711,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeKeyPressed(NativeKeyEvent arg0)
 	{
+		System.out.println("Got a key input");
 		if(paused)
 		{
 			return;

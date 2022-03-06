@@ -58,13 +58,13 @@ public class ScreenshotGenerator implements Runnable
 		running = true;
 		while(running)
 		{
-			long metricTime = System.currentTimeMillis();
+			//long metricTime = System.currentTimeMillis();
 			takeScreenshot();
-			metricTime = metricTime - System.currentTimeMillis();
+			//metricTime = metricTime - System.currentTimeMillis();
 			for(int x = 0; x < myMetricListeners.size(); x++)
 			{
 				MetricListener curListener = (MetricListener) myMetricListeners.get(x);
-				curListener.recordMetric("Screenshot", metricTime, "ms");
+				//curListener.recordMetric("Screenshot", metricTime, "ms");
 			}
 			try
 			{
