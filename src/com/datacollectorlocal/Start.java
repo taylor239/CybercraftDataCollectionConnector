@@ -592,7 +592,6 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeMouseClicked(NativeMouseEvent arg0)
 	{
-		System.out.println("Got a mouse input");
 		if(paused)
 		{
 			return;
@@ -711,7 +710,6 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void nativeKeyPressed(NativeKeyEvent arg0)
 	{
-		System.out.println("Got a key input");
 		if(paused)
 		{
 			return;
