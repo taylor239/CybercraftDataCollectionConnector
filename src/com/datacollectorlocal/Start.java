@@ -2005,7 +2005,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	@Override
 	public synchronized void getScreenshotEvent(Date timeTaken, Image screenshot)
 	{
-		System.out.println("Got a screenshot");
+		//System.out.println("Got a screenshot");
 		if(paused)
 		{
 			return;

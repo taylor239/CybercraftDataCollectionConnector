@@ -48,7 +48,7 @@ public class DataAggregator implements Runnable
 	
 	private long maxDiff = 600000;
 	private long maxDiffCeiling = 600000000;
-	private long maxDiffFloor = 60000;
+	private long maxDiffFloor = 600;
 	
 	
 	public static DataAggregator getInstance(String serverAddr, String username, String token, boolean continuous, String event, String admin)
@@ -210,10 +210,12 @@ public class DataAggregator implements Runnable
 			
 			if (this.maxDiff > this.maxDiffCeiling)
 			{
+				System.out.println("Limiting due to max diff: " + maxDiffCeiling);
 				this.maxDiff = this.maxDiffCeiling;
 			}
 			if (this.maxDiff < this.maxDiffFloor)
 			{
+				System.out.println("Limiting due to min diff: " + maxDiffFloor);
 				this.maxDiff = this.maxDiffFloor;
 			}
 			//try
@@ -786,8 +788,10 @@ public class DataAggregator implements Runnable
 						mySender = new WebsocketDataSender(new URI(server));
 					}
 					shouldPause = true;
-					maxDiff /= 2L;
+					maxDiff /= 3L;
 				}
+				
+				System.out.println("Cur max diff: " + maxDiff);
 				
 				/*byte[] buffer = new byte[1024];
 				int length = 0;
