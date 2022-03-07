@@ -106,7 +106,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	private double imageCompressionFactor = .5;
 	
 	private int screenshotTimeout = 10000;
-	private ScreenshotGenerator myGenerator;
+	private SimplerScreenshotGenerator myGenerator;
 	private int processTimeout = 20000;
 	private PortableProcessMonitor myProcessMonitor;
 	private boolean running = false;
@@ -181,7 +181,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			e.printStackTrace();
 		}
-		myGenerator = new ScreenshotGenerator(screenshotTimeout);
+		myGenerator = new SimplerScreenshotGenerator(screenshotTimeout);
 		myGenerator.addMetricListener(this);
 		myGenerator.addScreenshotListener(this);
 		myProcessMonitor = new PortableProcessMonitor(processTimeout, true, threads);
