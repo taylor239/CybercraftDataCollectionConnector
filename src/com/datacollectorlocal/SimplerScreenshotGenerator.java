@@ -74,8 +74,8 @@ public class SimplerScreenshotGenerator implements Runnable
 	
 	public synchronized void takeScreenshot()
 	{
-		running = true;
-		while(running)
+		//running = true;
+		//while(running)
 		{
 			Image screenshot = myRobot.createScreenCapture(new Rectangle(Toolkit.getDefaultToolkit().getScreenSize()));
 			Date date = new Date();
