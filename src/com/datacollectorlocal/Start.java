@@ -87,7 +87,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private Thread myThread;
 	private static ArrayList windowsToClose = new ArrayList();
-	private PortableActiveWindowMonitor myMonitor = new PortableActiveWindowMonitor();
+	private PortableActiveWindowMonitor myMonitor;// = new PortableActiveWindowMonitor();
 	private String windowID = "";
 	private String windowName = "";
 	private double windowX = -1; 
@@ -164,8 +164,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			eventName = event;
 		}
-		myThread = new Thread(this, "mainMonitorThread");
-		myThread.start();
+		
+		
 		try
 		{
 			Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
@@ -185,7 +185,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		myGenerator.addMetricListener(this);
 		myGenerator.addScreenshotListener(this);
 		myProcessMonitor = new PortableProcessMonitor(processTimeout, true, threads);
+		myMonitor = new PortableActiveWindowMonitor(myProcessMonitor);
 		myProcessMonitor.setStart(this);
+		
+		myThread = new Thread(this, "mainMonitorThread");
+		myThread.start();
 	}
 	
 	public static synchronized void update()
@@ -528,6 +532,9 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return false;
 		}
+		
+		//System.out.println("Checking for new window...");
+		
 		long metricTime = System.currentTimeMillis();
 		HashMap newWindow = null;
 		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
@@ -543,6 +550,9 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			metricTime = metricTime - System.currentTimeMillis();
 			recordMetric("Window Detection", metricTime, "ms");
+			
+			//System.out.println("Window is null.");
+			
 			return false;
 		}
 		if(!("" + newWindow.get("WindowID")).equals(windowID) || !("" + newWindow.get("WindowTitle")).equals(windowName) || !((double)newWindow.get("x") == windowX) || !((double)newWindow.get("y") == windowY || !((double)newWindow.get("width") == windowWidth) || !((double)newWindow.get("height") == windowHeight)))
@@ -581,9 +591,18 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					e.printStackTrace();
 				}
 			}
-			myGenerator.takeScreenshot();
+			
+			//System.out.println("Interrupting sleep screenshot.");
+			
+			myGenerator.interruptSleepScreenshot();
+			
+			//System.out.println("New window.");
+			
 			return true;
 		}
+		
+		//System.out.println("No new window.");
+		
 		return false;
 	}
 

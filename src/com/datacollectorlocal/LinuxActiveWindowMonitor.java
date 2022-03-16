@@ -28,6 +28,11 @@ public class LinuxActiveWindowMonitor implements ActiveWindowMonitor
 		myProcMonitor = new PortableProcessMonitor();
 	}
 	
+	public LinuxActiveWindowMonitor(PortableProcessMonitor passedProcMonitor)
+	{
+		myProcMonitor = passedProcMonitor;
+	}
+	
 	public HashMap getTopWindow(long diff)
 	{
 		//System.out.println("Getting window info");

@@ -67,8 +67,16 @@ public class SimplerScreenshotGenerator implements Runnable
 			}
 			catch (InterruptedException e)
 			{
-				e.printStackTrace();
+				//e.printStackTrace();
 			}
+		}
+	}
+	
+	public void interruptSleepScreenshot()
+	{
+		if(myThread.getState() == Thread.State.WAITING || myThread.getState() == Thread.State.TIMED_WAITING)
+		{
+			myThread.interrupt();
 		}
 	}
 	

@@ -18,12 +18,24 @@ public class PortableActiveWindowMonitor
 	private OperatingSystem os;
 	private PortableProcessMonitor myProcMonitor;
 	
+	//private LinuxActiveWindowMonitor backupMonitor;
+	
 	public PortableActiveWindowMonitor()
 	{
 		si = new SystemInfo();
 		hal = si.getHardware();
 		os = si.getOperatingSystem();
 		myProcMonitor = new PortableProcessMonitor();
+		//backupMonitor = new LinuxActiveWindowMonitor(myProcMonitor);
+	}
+	
+	public PortableActiveWindowMonitor(PortableProcessMonitor passedMonitor)
+	{
+		si = new SystemInfo();
+		hal = si.getHardware();
+		os = si.getOperatingSystem();
+		myProcMonitor = passedMonitor;
+		//backupMonitor = new LinuxActiveWindowMonitor(myProcMonitor);
 	}
 	
 	public ArrayList getTopWindow(long diff)
@@ -33,12 +45,16 @@ public class PortableActiveWindowMonitor
 	
 	public ArrayList getWindowList(long diff)
 	{
+		//System.out.println("Getting top window");
 		ArrayList myReturn = new ArrayList();
 		
 		HashMap childMap = new HashMap();
 		List<OSDesktopWindow> windows = os.getDesktopWindows(true);
 		int maxOrder = 0;
 		HashMap activeMap = new HashMap();
+		
+		//System.out.println("Number of windows detected: " + windows.size());
+		
 		for(int x = 0; x < windows.size(); x++)
 		{
 			if(windows.get(x).getTitle().isEmpty() || windows.get(x).getLocAndSize().getWidth() == 0 || windows.get(x).getLocAndSize().getHeight() == 0)
@@ -59,6 +75,9 @@ public class PortableActiveWindowMonitor
 			
 			windowMap.put("WindowID", curWindow.getWindowId());
 			windowMap.put("WindowTitle", curWindow.getTitle());
+			
+			//System.out.println(curWindow.getTitle());
+			
 			windowMap.put("WindowFirstClass", processInfo.get("COMMAND"));
 			windowMap.put("WindowSecondClass", processInfo.get("ARGS"));
 			windowMap.put("WindowPID", "" + curWindow.getOwningProcessId());
@@ -79,6 +98,7 @@ public class PortableActiveWindowMonitor
 			}
 			childMap.put(curWindow.getOwningProcessId(), windowMap);
 			
+			
 		    myReturn.add(windowMap);
 		}
 		
@@ -91,6 +111,18 @@ public class PortableActiveWindowMonitor
 		}
 		topMap.put("IsFocus", "1");
 		}
+		
+		
+		//System.out.println("Returning:");
+		//System.out.println(myReturn.size());
+		
+		//System.out.println("Comparing to cmd line monitor:");
+		//HashMap backupMap = backupMonitor.getTopWindow(diff);
+		//if(backupMap != null)
+		//{
+		//	System.out.println(backupMap.get("WindowTitle"));
+		//}
+		
 		return myReturn;
 	}
 }
