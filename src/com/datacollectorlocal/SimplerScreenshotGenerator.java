@@ -61,13 +61,16 @@ public class SimplerScreenshotGenerator implements Runnable
 				MetricListener curListener = (MetricListener) myMetricListeners.get(x);
 				//curListener.recordMetric("Screenshot", metricTime, "ms");
 			}
-			try
+			if(seleepTime > 0)
 			{
-				Thread.sleep(sleepTime);
-			}
-			catch (InterruptedException e)
-			{
-				//e.printStackTrace();
+				try
+				{
+					Thread.sleep(sleepTime);
+				}
+				catch (InterruptedException e)
+				{
+					//e.printStackTrace();
+				}
 			}
 		}
 	}

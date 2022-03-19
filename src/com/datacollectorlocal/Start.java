@@ -635,6 +635,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
+		if(myGenerator != null)
+		{
+			myGenerator.interruptSleepScreenshot();
+		}
 	}
 
 	@Override
@@ -660,6 +664,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
+		if(myGenerator != null)
+		{
+			myGenerator.interruptSleepScreenshot();
+		}
 	}
 
 	@Override
@@ -685,6 +693,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
+		if(myGenerator != null)
+		{
+			myGenerator.interruptSleepScreenshot();
+		}
 	}
 
 	
@@ -716,6 +728,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
 		clicksToWrite.add(clickToWrite);
+		if(myGenerator != null)
+		{
+			myGenerator.interruptSleepScreenshot();
+		}
 	}
 
 	@Override
@@ -745,7 +761,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		keyToWrite.put("username", userName);
 		keysToWrite.add(keyToWrite);
-		
+		if(myGenerator != null)
+		{
+			myGenerator.interruptSleepScreenshot();
+		}
 	}
 
 	@Override
@@ -767,7 +786,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		keyToWrite.put("username", userName);
 		keysToWrite.add(keyToWrite);
-		
+		if(myGenerator != null)
+		{
+			myGenerator.interruptSleepScreenshot();
+		}
 	}
 	
 	@Override
@@ -794,6 +816,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 		keyToWrite.put("username", userName);
 		keysToWrite.add(keyToWrite);
+		if(myGenerator != null)
+		{
+			myGenerator.interruptSleepScreenshot();
+		}
 	}
 	
 	public void recordMetric(String metricName, double metricValue, String metricUnit)
