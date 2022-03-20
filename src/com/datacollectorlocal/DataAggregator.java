@@ -46,7 +46,7 @@ public class DataAggregator implements Runnable
 	private boolean daemon = false;
 	private String myEvent = "";
 	
-	private long maxDiff = 600000;
+	private long maxDiff = 6000;
 	private long maxDiffCeiling = 600000000;
 	private long maxDiffFloor = 600;
 	
@@ -756,11 +756,11 @@ public class DataAggregator implements Runnable
 					
 					long curFreeMemory = freeMemory();
 					long lastSendAllocation = lastFreeMemory - curFreeMemory;
-					long dataSize = totalJSON.length() * 4;
+					long dataSize = totalJSON.length() * 16;
 					
 					System.out.println("Available memory: " + curFreeMemory);
 					
-					if(((2 * lastSendAllocation) < (curFreeMemory)) && (dataSize < curFreeMemory))
+					if(((3 * lastSendAllocation) < (curFreeMemory)) && ((dataSize) < curFreeMemory))
 					{
 						maxDiff *= 2;
 					}
