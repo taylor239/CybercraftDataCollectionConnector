@@ -10,13 +10,23 @@ import oshi.hardware.HardwareAbstractionLayer;
 import oshi.software.os.OSDesktopWindow;
 import oshi.software.os.OperatingSystem;
 
-public class PortableActiveWindowMonitor
+public class PortableActiveWindowMonitor implements Runnable
 {
 	
 	private SystemInfo si;
 	private HardwareAbstractionLayer hal;
 	private OperatingSystem os;
 	private PortableProcessMonitor myProcMonitor;
+	
+	private ArrayList consumerList = new ArrayList();
+	
+	private int pollPeriod = 10000;
+	
+	private Thread myThread;
+	
+	private boolean running = false;
+	
+	private long usualDiff = 0;
 	
 	//private LinuxActiveWindowMonitor backupMonitor;
 	
@@ -27,6 +37,9 @@ public class PortableActiveWindowMonitor
 		os = si.getOperatingSystem();
 		myProcMonitor = new PortableProcessMonitor();
 		//backupMonitor = new LinuxActiveWindowMonitor(myProcMonitor);
+		myThread = new Thread(this);
+		myThread.setName("WindowMonitor");
+		myThread.start();
 	}
 	
 	public PortableActiveWindowMonitor(PortableProcessMonitor passedMonitor)
@@ -36,6 +49,23 @@ public class PortableActiveWindowMonitor
 		os = si.getOperatingSystem();
 		myProcMonitor = passedMonitor;
 		//backupMonitor = new LinuxActiveWindowMonitor(myProcMonitor);
+		myThread = new Thread(this);
+		myThread.setName("WindowMonitor");
+		myThread.start();
+	}
+	
+	public void addWindowConsumer(ActiveWindowConsumer toAdd)
+	{
+		consumerList.add(toAdd);
+	}
+	
+	public void interruptSleep(long diff)
+	{
+		usualDiff = diff;
+		if(running && (myThread.getState() == Thread.State.WAITING || myThread.getState() == Thread.State.TIMED_WAITING))
+		{
+			myThread.interrupt();
+		}
 	}
 	
 	public ArrayList getTopWindow(long diff)
@@ -43,7 +73,7 @@ public class PortableActiveWindowMonitor
 		return getWindowList(diff);
 	}
 	
-	public ArrayList getWindowList(long diff)
+	public synchronized ArrayList getWindowList(long diff)
 	{
 		//System.out.println("Getting top window");
 		ArrayList myReturn = new ArrayList();
@@ -124,5 +154,31 @@ public class PortableActiveWindowMonitor
 		//}
 		
 		return myReturn;
+	}
+
+	@Override
+	public void run()
+	{
+		running = true;
+		
+		while(running)
+		{
+			try
+			{
+				//System.out.println("Getting windows...");
+				ArrayList toConsume = getWindowList(usualDiff);
+				
+				for(int x = 0; x < consumerList.size(); x++)
+				{
+					((ActiveWindowConsumer) consumerList.get(x)).consumeWindowList(toConsume);
+				}
+				//System.out.println("Done windows.");
+				myThread.sleep(pollPeriod);
+			}
+			catch (InterruptedException e)
+			{
+				
+			}
+		}
 	}
 }

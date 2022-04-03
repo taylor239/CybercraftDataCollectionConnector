@@ -79,8 +79,10 @@ import oshi.software.os.OperatingSystem;
 
 
 
-public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener, PauseListener, MetricListener
+public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener, PauseListener, MetricListener, ActiveWindowConsumer
 {
+	private int shortPoll = 50;
+	
 	boolean verbose = false;
 	
 	boolean metrics = false;
@@ -186,6 +188,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		myGenerator.addScreenshotListener(this);
 		myProcessMonitor = new PortableProcessMonitor(processTimeout, true, threads);
 		myMonitor = new PortableActiveWindowMonitor(myProcessMonitor);
+		myMonitor.addWindowConsumer(this);
 		myProcessMonitor.setStart(this);
 		
 		myThread = new Thread(this, "mainMonitorThread");
@@ -605,6 +608,97 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		return false;
 	}
+	
+	public void checkNewInterrupt(PortableActiveWindowMonitor myMonitor, long diff)
+	{
+		if(paused)
+		{
+			return;
+		}
+		if(myMonitor != null)
+		{
+			myMonitor.interruptSleep(diff);
+		}
+	}
+	
+	public void consumeWindowList(ArrayList newWindows)
+	{
+		if(paused)
+		{
+			return;
+		}
+		
+		//System.out.println("Checking for new window...");
+		
+		long metricTime = System.currentTimeMillis();
+		HashMap newWindow = null;
+		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		for(int x=0; x < newWindows.size(); x++)
+		{
+			HashMap curWindow = (HashMap) newWindows.get(x);
+			if(curWindow.get("IsFocus").equals("1"))
+			{
+				newWindow = curWindow;
+			}
+		}
+		if(newWindow == null)
+		{
+			metricTime = metricTime - System.currentTimeMillis();
+			recordMetric("Window Detection", metricTime, "ms");
+			
+			//System.out.println("Window is null.");
+			
+			return;
+		}
+		if(!("" + newWindow.get("WindowID")).equals(windowID) || !("" + newWindow.get("WindowTitle")).equals(windowName) || !((double)newWindow.get("x") == windowX) || !((double)newWindow.get("y") == windowY || !((double)newWindow.get("width") == windowWidth) || !((double)newWindow.get("height") == windowHeight)))
+		{
+			windowName = "" + newWindow.get("WindowTitle");
+			windowID = "" + newWindow.get("WindowID");
+			windowX = (double) newWindow.get("x");
+			windowY = (double) newWindow.get("y");
+			windowWidth = (double) newWindow.get("width");
+			windowHeight = (double) newWindow.get("height");
+			if(newWindow != null)
+			{
+				for(int x=0; x < newWindows.size(); x++)
+				{
+					HashMap curWindow = (HashMap) newWindows.get(x);
+					
+					curWindow.put("clickedInTime", curTimestamp);
+					curWindow.put("username", userName);
+					
+					windowsToWrite.add(curWindow);
+				}
+			}
+			currentWindowData = newWindow;
+			if(verbose)
+				System.out.println("New window");
+			
+			metricTime = metricTime - System.currentTimeMillis();
+			recordMetric("Window Detection", metricTime, "ms");
+			while(myGenerator == null)
+			{
+				//System.out.println("Still waiting");
+				try {
+					Thread.currentThread().sleep(5);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			//System.out.println("Interrupting sleep screenshot.");
+			
+			myGenerator.interruptSleepScreenshot();
+			
+			//System.out.println("New window.");
+			
+		}
+		
+		//System.out.println("No new window.");
+		
+		
+	}
 
 	
 	boolean recordClick = false;
@@ -620,18 +714,28 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Clicked: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "click");
 		//Calendar currentTime = Calendar.getInstance();
 		clickToWrite.put("clickTime", recordTimestamp);
-		if(currentWindowData == null)
+		while(currentWindowData == null)
 		{
 			System.out.println("Warning: No top window detected for mouse input.");
+			try
+			{
+				Thread.currentThread().sleep(shortPoll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			};
 		}
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
@@ -650,18 +754,28 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Pressed: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "down");
 		//Calendar currentTime = Calendar.getInstance();
 		clickToWrite.put("clickTime", recordTimestamp);
-		if(currentWindowData == null)
+		while(currentWindowData == null)
 		{
 			System.out.println("Warning: No top window detected for mouse input.");
+			try
+			{
+				Thread.currentThread().sleep(shortPoll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			};
 		}
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
@@ -680,18 +794,28 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Released: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "up");
 		//Calendar currentTime = Calendar.getInstance();
 		clickToWrite.put("clickTime", recordTimestamp);
-		if(currentWindowData == null)
+		while(currentWindowData == null)
 		{
 			System.out.println("Warning: No top window detected for mouse input.");
+			try
+			{
+				Thread.currentThread().sleep(shortPoll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			};
 		}
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
@@ -716,18 +840,28 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Dragged: " + arg0.getX() + ", " + arg0.getY());
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap clickToWrite = new HashMap();
 		clickToWrite.put("xLoc", arg0.getX());
 		clickToWrite.put("yLoc", arg0.getY());
 		clickToWrite.put("type", "drag");
 		//Calendar currentTime = Calendar.getInstance();
 		clickToWrite.put("clickTime", recordTimestamp);
-		if(currentWindowData == null)
+		while(currentWindowData == null)
 		{
 			System.out.println("Warning: No top window detected for mouse input.");
+			try
+			{
+				Thread.currentThread().sleep(shortPoll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			};
 		}
 		clickToWrite.put("window", currentWindowData);
 		clickToWrite.put("username", userName);
@@ -754,16 +888,26 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "press");
 		keyToWrite.put("inputTime", recordTimestamp);
+		while(currentWindowData == null)
+		{
+			System.out.println("Warning: No top window detected for key input.");
+			try
+			{
+				Thread.currentThread().sleep(shortPoll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			};
+		}
 		keyToWrite.put("window", currentWindowData);
 		keyToWrite.put("button", NativeKeyEvent.getKeyText(arg0.getKeyCode()));
-		if(currentWindowData == null)
-		{
-			System.err.println(keyToWrite);
-		}
 		keyToWrite.put("username", userName);
 		keysToWrite.add(keyToWrite);
 		if(myGenerator != null)
@@ -780,16 +924,26 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "release");
 		keyToWrite.put("inputTime", recordTimestamp);
+		while(currentWindowData == null)
+		{
+			System.out.println("Warning: No top window detected for key input.");
+			try
+			{
+				Thread.currentThread().sleep(shortPoll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			};
+		}
 		keyToWrite.put("window", currentWindowData);
 		keyToWrite.put("button", NativeKeyEvent.getKeyText(arg0.getKeyCode()));
-		if(currentWindowData == null)
-		{
-			System.err.println(keyToWrite);
-		}
 		keyToWrite.put("username", userName);
 		keysToWrite.add(keyToWrite);
 		if(myGenerator != null)
@@ -806,21 +960,31 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//System.out.println("" + arg0.getWhen() + ":" + arg0.getKeyChar());
 		//System.out.println(Short.MAX_VALUE * 2);
 		//if(true)
 		//	return;
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		HashMap keyToWrite = new HashMap();
 		keyToWrite.put("type", "type");
 		keyToWrite.put("inputTime", recordTimestamp);
 		keyToWrite.put("preciseTime", arg0.getWhen());
+		while(currentWindowData == null)
+		{
+			System.out.println("Warning: No top window detected for key input.");
+			try
+			{
+				Thread.currentThread().sleep(shortPoll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			};
+		}
 		keyToWrite.put("window", currentWindowData);
 		keyToWrite.put("button", "" + arg0.getKeyChar());
-		if(currentWindowData == null)
-		{
-			System.err.println(keyToWrite);
-		}
 		keyToWrite.put("username", userName);
 		keysToWrite.add(keyToWrite);
 		if(myGenerator != null)
@@ -960,7 +1124,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			
 			try
 			{
-				checkNew(myMonitor.getTopWindow(timeDifference));
+				checkNewInterrupt(myMonitor, timeDifference);
+				//checkNew(myMonitor.getTopWindow(timeDifference));
 				if(count > 5 && !windowsToWrite.isEmpty() || !clicksToWrite.isEmpty() || !screenshotsToWrite.isEmpty())
 				{
 					long startEventInsert = System.currentTimeMillis();
@@ -2065,7 +2230,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		Timestamp newTimestamp = new Timestamp(new Date().getTime()-timeDifference);
 		
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 		Object[] myPair = new Object[3];
 		
 		try
@@ -2111,7 +2277,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	public void resume()
 	{
 		paused = false;
-		checkNew(myMonitor.getTopWindow(timeDifference));
+		checkNewInterrupt(myMonitor, timeDifference);
+		//checkNew(myMonitor.getTopWindow(timeDifference));
 	}
 
 }
