@@ -146,8 +146,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private boolean logging = false;
 	
-	public Start(String user, String event, String admin, int screenshot, int process, boolean toLog, boolean toMetric, boolean threadGranularity)
+	public Start(String user, String event, String admin, int screenshot, int process, boolean toLog, boolean toMetric, boolean threadGranularity, String imageCompression, double compressionAmount)
 	{
+		imageCompressionType = imageCompression;
+		imageCompressionFactor = compressionAmount;
+		
 		threads = threadGranularity;
 		metrics = toMetric;
 		logging = toLog;
@@ -195,6 +198,9 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		myThread.start();
 	}
 	
+	/**
+	 * Updates and restarts the software.  Currently needs work due to dependency drift.
+	 */
 	public static synchronized void update()
 	{
 		boolean update = checkVersion();
@@ -205,6 +211,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
+	/**
+	 * Restarts this application with no OS dependency.  Unknown if still working;
+	 * this was used by the updater component but the update checking currently needs
+	 * fixing before this is needed.
+	 */
 	public static void restart()
 	{
 		File currentFile = new File(jarPath);
@@ -262,6 +273,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
+	/**
+	 * Checks to see if the current jar file is the latest version on the server.
+	 * Currently does not work due do dependency drift.  (Why did the API remove
+	 * its MD5 functions?  And why not replace them with other standard hashes?
+	 * Could fix with an external hash library)
+	 * @return true if the running version matches the server version, false otherwise.
+	 */
 	public static boolean checkVersion()
 	{
 		boolean updated = false;
@@ -343,6 +361,12 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		return updated;
 	}
 	
+	/**
+	 * Parses the arguments to configure settings.  May want to migrate this
+	 * to a more standardized arg parsing library.
+	 * @param args Argument list from the command line.
+	 * @return a hash map of settings (keys) and their values.
+	 */
 	public synchronized static HashMap configure(String[] args)
 	{
 		HashMap myReturn = new HashMap();
@@ -408,7 +432,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				myReturn.put("imagecompression", true);
 				myReturn.put("imagecompressiontype", args[x+1]);
 				x++;
-				if(args[x+1].equals("jpg"))
+				if(args.length > x && args[x].equals("jpg"))
 				{
 					myReturn.put("imagecompressionlevel", args[x+1]);
 					x++;
@@ -419,6 +443,19 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		return myReturn;
 	}
 
+	/**
+	 * Main method, called to launch the Endpoint Monitor (this file,
+	 * maybe refactor this file's name at some point).  Here, the method
+	 * creates and configures a Start (the data collection object that
+	 * gets data from all the different sources) and optionally a
+	 * DataAggregator (which streams data to the server) and a TaskGUI
+	 * (which allows users to enter tasks) if configured to do so based
+	 * on passed args.  The method does not give up control due to
+	 * (possibly prior) dependencies exiting if control on this thread
+	 * is given up.  This control at one point periodically checked the
+	 * software version but that component is broken currently.
+	 * @param args Command line args.
+	 */
 	public static void main(String[] args)
 	{
 		System.out.println("Launching on " + new Date());
@@ -495,8 +532,19 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			process = Integer.parseInt((String) configuration.get("process"));
 		}
-				
-		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging, metrics, threadGranularity);
+		
+		String compressionType = "jpg";
+		if(configuration.containsKey("imagecompressiontype"))
+		{
+			compressionType = ((String) configuration.get("imagecompressiontype"));
+		}
+		double compressionAmount = .5;
+		if(configuration.containsKey("imagecompressionlevel"))
+		{
+			compressionAmount = Double.parseDouble((String) configuration.get("imagecompressionlevel"));
+		}
+		
+		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging, metrics, threadGranularity, compressionType, compressionAmount);
 		
 		if(configuration.containsKey("continuous"))
 		{
@@ -524,11 +572,23 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
+	/**
+	 * Gives this instance a DataAggregator, which is used to upload
+	 * data to the remote server.
+	 * @param myAggregator The aggregator currently uploading data.
+	 */
 	public void setAggregator(DataAggregator myAggregator)
 	{
 		curAggregator = myAggregator;
 	}
 	
+	/**
+	 * Polls the active window to see if it has changed.  If a new
+	 * active window is detected, it is recorded and a signal to
+	 * take a new screenshot is sent to the screenshot generator.
+	 * @param newWindows the new window list, generated by OSHI.
+	 * @return true if a new window is detected, false otherwise.
+	 */
 	public synchronized boolean checkNew(ArrayList newWindows)
 	{
 		if(paused)
@@ -609,6 +669,18 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		return false;
 	}
 	
+	/**
+	 * Sends a signal to asynchronously check the current active window as
+	 * soon as possible.  In some systems, window checking with OSHI can
+	 * take human-input levels of latency to complete, which means checking
+	 * on all inputs causes system lag and incorrect input timestamps.
+	 * Asynchronously checking top windows eliminates input timestamp lag
+	 * but could also introduce very slight lag into active window
+	 * detection.
+	 * @param myMonitor The ActiveWindowMonitor which gets the window
+	 * list from OSHI.
+	 * @param diff deprecated.
+	 */
 	public void checkNewInterrupt(PortableActiveWindowMonitor myMonitor, long diff)
 	{
 		if(paused)
@@ -621,6 +693,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
+	/**
+	 * Consumes the window list generated by OSHI in an ActiveWindowMonitor.
+	 * This window list is queued to write to disk.
+	 * @param newWindows The latest window list from OSHI.
+	 */
 	public void consumeWindowList(ArrayList newWindows)
 	{
 		if(paused)
@@ -702,6 +779,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 
 	
 	boolean recordClick = false;
+	/**
+	 * Consumes mouse clicked events from JNativeHook.  They are added
+	 * to the queue to be recorded and trigger an active window check.
+	 * @param arg0 the mouse clicked event.
+	 */
 	@Override
 	public synchronized void nativeMouseClicked(NativeMouseEvent arg0)
 	{
@@ -746,6 +828,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 
+	/**
+	 * Consumes mouse pressed events from JNativeHook.  They are added
+	 * to the queue to be recorded and trigger an active window check.
+	 * @param arg0 the mouse pressed event.
+	 */
 	@Override
 	public synchronized void nativeMousePressed(NativeMouseEvent arg0)
 	{
@@ -786,6 +873,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 
+	/**
+	 * Consumes mouse released events from JNativeHook.  They are added
+	 * to the queue to be recorded and trigger an active window check.
+	 * @param arg0 the mouse released event.
+	 */
 	@Override
 	public synchronized void nativeMouseReleased(NativeMouseEvent arg0)
 	{
@@ -828,6 +920,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 
 	
 	private boolean useDragged = false;
+	/**
+	 * Consumes mouse dragged events from JNativeHook.  Currently, these are ignored.
+	 * @param arg0 the mouse dragged event.
+	 */
 	@Override
 	public synchronized void nativeMouseDragged(NativeMouseEvent arg0)
 	{
@@ -872,6 +968,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 
+	/**
+	 * Consumes mouse moved events from JNativeHook.  They are currently ignored.
+	 * @param arg0 the mouse moved event.
+	 */
 	@Override
 	public void nativeMouseMoved(NativeMouseEvent arg0)
 	{
@@ -880,6 +980,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 	}
 	
+	/**
+	 * Consumes keyboard pressed events from JNativeHook.  They are added
+	 * to the queue to be recorded and trigger an active window check.
+	 * @param arg0 the keyboard pressed event.
+	 */
 	@Override
 	public synchronized void nativeKeyPressed(NativeKeyEvent arg0)
 	{
@@ -916,6 +1021,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 
+	/**
+	 * Consumes keyboard released events from JNativeHook.  They are added
+	 * to the queue to be recorded and trigger an active window check.
+	 * @param arg0 the keyboard released event.
+	 */
 	@Override
 	public synchronized void nativeKeyReleased(NativeKeyEvent arg0)
 	{
@@ -952,6 +1062,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
+	/**
+	 * Consumes keyboard typed events from JNativeHook.  They are added
+	 * to the queue to be recorded and trigger an active window check.
+	 * @param arg0 the keyboard typed event.
+	 */
 	@Override
 	public void nativeKeyTyped(NativeKeyEvent arg0)
 	{
@@ -993,6 +1108,12 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
+	/**
+	 * Adds a single-value metric to the queue to record.
+	 * @param metricName The metric name.
+	 * @param metricValue The metric value.
+	 * @param metricUnit The metric unit.
+	 */
 	public void recordMetric(String metricName, double metricValue, String metricUnit)
 	{
 		if(paused || !metrics)
@@ -1018,6 +1139,15 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		metricsToWrite.add(metricToWrite);
 	}
 	
+	/**
+	 * Adds a double-value metric to the queue to record.  Useful for
+	 * calculating rates (ie: count per time period).
+	 * @param metricName The metric name.
+	 * @param metricValue1 The first metric value.
+	 * @param metricUnit1 The first metric unit.
+	 * @param metricValue2 The second metric value.
+	 * @param metricUnit2 The second metric unit.
+	 */
 	public void recordMetric(String metricName, double metricValue1, String metricUnit1, double metricValue2, String metricUnit2)
 	{
 		if(paused || !metrics)
@@ -1043,6 +1173,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		metricsToWrite.add(metricToWrite);
 	}
 	
+	/**
+	 * Adds a list of processes to the queue to record.
+	 * @param processes the current process list to record.
+	 */
 	public void monitorProcesses(ArrayList processes)
 	{
 		if(paused)
@@ -1058,6 +1192,9 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
+	/**
+	 * Stops the data collection threads in preparation for exit.
+	 */
 	public void stop()
 	{
 		GlobalScreen.removeNativeKeyListener(this);
@@ -1075,6 +1212,12 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		running = false;
 	}
 
+	/**
+	 * This method records all of the queues (of screenshots, windows, processes, keystrokes,
+	 * mouse input) to disk via a MySql database.  It continually does this in the background
+	 * as other threads generate new data.  To prevent synchronization issues, new queues
+	 * are instantiated and replace the old references before the old queues are written to disk.
+	 */
 	@Override
 	public void run()
 	{
@@ -2236,20 +2379,30 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		try
 		{
-			JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
-			jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-			if(imageCompressionType.equals("jpg"))
-			{
-				jpegParams.setCompressionQuality((float) imageCompressionFactor);
-			}
 			ByteArrayOutputStream toByte = new ByteArrayOutputStream();
 			ImageOutputStream imageOutput = ImageIO.createImageOutputStream(toByte);
 			ImageWriter myWriter = ImageIO.getImageWritersByFormatName(imageCompressionType).next();
 			myWriter.setOutput(imageOutput);
 			
+			//System.out.println("Comp type: " + imageCompressionType);
 			
-			myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), jpegParams);
-			
+			if(imageCompressionType.equals("jpg"))
+			{
+				JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
+				jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+				jpegParams.setCompressionQuality((float) imageCompressionFactor);
+				myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), jpegParams);
+			}
+			else if(imageCompressionType.equals("png"))
+			{
+				ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
+				if(pngParam.canWriteCompressed())
+				{
+					pngParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+					pngParam.setCompressionQuality(0.0f);
+				}
+				myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), pngParam);
+			}
 			
 			myPair[0] = newTimestamp;//new Timestamp(timeTaken.getTime());
 			myPair[1] = toByte.toByteArray();
