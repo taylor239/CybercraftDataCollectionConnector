@@ -696,7 +696,37 @@ public class DataAggregator implements Runnable
 					//}
 					//Thread.currentThread().sleep(2500);
 				}
+				
+				double sendStart = System.currentTimeMillis();
 				String responseString = mySender.sendWait(compressedString);
+				double sendTime = System.currentTimeMillis() - sendStart;
+				
+				double maxUploadTime = 100000;
+				
+				double headroom = 1 - (sendTime / maxUploadTime);
+				System.out.println("Upload time: " + sendTime);
+				System.out.println("Headroom: " + (headroom));
+				
+				while(mySender == null || (!mySender.isOpen()))
+				{
+					
+					//mySender.connectBlocking();
+					//if(!mySender.isOpen())
+					//{
+						if(mySender != null && mySender.isOpen())
+						{
+							mySender.closeBlocking();
+						}
+						mySender = new WebsocketDataSender(new URI(server));
+						
+						if(!mySender.isOpen())
+						{
+							mySender = null;
+							Thread.currentThread().sleep(5000);
+						}
+					//}
+					//Thread.currentThread().sleep(2500);
+				}
 				
 				/*
 				HttpClient httpclient = HttpClients.createDefault();
@@ -762,7 +792,14 @@ public class DataAggregator implements Runnable
 					
 					if(((3 * lastSendAllocation) < (curFreeMemory)) && ((dataSize) < curFreeMemory))
 					{
-						maxDiff *= 2;
+						//If we have enough memory space then we multiply by the
+						//increment.  The increment is 2 multiplied by the amount
+						//of headroom.  Headroom is the amount of time it takes
+						//to transmit the last upload as a portion of the max
+						//time before hitting a timeout.  All of this makes
+						//messages the maximal size before hitting memory or
+						//timeout limits.
+						maxDiff *= (2 * headroom);
 					}
 					else
 					{

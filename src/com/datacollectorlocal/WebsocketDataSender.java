@@ -14,6 +14,8 @@ public class WebsocketDataSender extends WebSocketClient
 	private long poll = 1000;
 	//private long maxFrameSize = 60000;
 	
+	public long maxTimeout = 50000000;
+	
 	public static void main(String[] args)
 	{
 		try
@@ -62,6 +64,12 @@ public class WebsocketDataSender extends WebSocketClient
 			if(curTime > timeout || !isOpen())
 			{
 				System.out.println("Timeout: " + timeout);
+				try {
+					closeBlocking();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				break;
 			}
 		}
