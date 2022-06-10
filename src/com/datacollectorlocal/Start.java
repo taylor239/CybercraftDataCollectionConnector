@@ -432,9 +432,14 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				myReturn.put("imagecompression", true);
 				myReturn.put("imagecompressiontype", args[x+1]);
 				x++;
-				if(args.length > x && args[x].equals("jpg"))
+				if(args.length > x && !(args[x + 1].contains("-")))
 				{
 					myReturn.put("imagecompressionlevel", args[x+1]);
+					x++;
+				}
+				if(args.length > x && !(args[x + 1].contains("-")))
+				{
+					myReturn.put("diff", args[x+1]);
 					x++;
 				}
 			}
@@ -600,7 +605,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		long metricTime = System.currentTimeMillis();
 		HashMap newWindow = null;
-		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp curTimestamp = getUniqueCurrentTimestamp();
 		for(int x=0; x < newWindows.size(); x++)
 		{
 			HashMap curWindow = (HashMap) newWindows.get(x);
@@ -709,7 +714,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		long metricTime = System.currentTimeMillis();
 		HashMap newWindow = null;
-		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp curTimestamp = getUniqueCurrentTimestamp();
 		for(int x=0; x < newWindows.size(); x++)
 		{
 			HashMap curWindow = (HashMap) newWindows.get(x);
@@ -795,7 +800,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp recordTimestamp = getUniqueCurrentTimestamp();
 		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Clicked: " + arg0.getX() + ", " + arg0.getY());
@@ -840,7 +845,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp recordTimestamp = getUniqueCurrentTimestamp();
 		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Pressed: " + arg0.getX() + ", " + arg0.getY());
@@ -885,7 +890,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp recordTimestamp = getUniqueCurrentTimestamp();
 		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Released: " + arg0.getX() + ", " + arg0.getY());
@@ -935,7 +940,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp recordTimestamp = getUniqueCurrentTimestamp();
 		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//if(verbose)
 		//System.out.println("Mouse Dragged: " + arg0.getX() + ", " + arg0.getY());
@@ -980,6 +985,18 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 	}
 	
+	private long lastTimestamp = -1;
+	private synchronized Timestamp getUniqueCurrentTimestamp()
+	{
+		long curTime = new Date().getTime() - timeDifference;
+		if(curTime <= lastTimestamp)
+		{
+			curTime = lastTimestamp + 1;
+		}
+		lastTimestamp = curTime;
+		return new Timestamp(curTime);
+	}
+	
 	/**
 	 * Consumes keyboard pressed events from JNativeHook.  They are added
 	 * to the queue to be recorded and trigger an active window check.
@@ -992,7 +1009,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp recordTimestamp = getUniqueCurrentTimestamp();
 		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		checkNewInterrupt(myMonitor, timeDifference);
 		//checkNew(myMonitor.getTopWindow(timeDifference));
@@ -1012,6 +1029,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			};
 		}
 		keyToWrite.put("window", currentWindowData);
+		
+		//System.out.println("Char typed: " + NativeKeyEvent.getKeyText(arg0.getKeyCode()));
+		
+		//System.out.println("Typed at: " + recordTimestamp);
+		
 		keyToWrite.put("button", NativeKeyEvent.getKeyText(arg0.getKeyCode()));
 		keyToWrite.put("username", userName);
 		keysToWrite.add(keyToWrite);
@@ -1033,7 +1055,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp recordTimestamp = getUniqueCurrentTimestamp();
 		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		checkNewInterrupt(myMonitor, timeDifference);
 		//checkNew(myMonitor.getTopWindow(timeDifference));
@@ -1074,7 +1096,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp recordTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp recordTimestamp = getUniqueCurrentTimestamp();
 		//System.out.println(new Date().getTime()-timeDifference - arg0.getWhen());
 		//System.out.println("" + arg0.getWhen() + ":" + arg0.getKeyChar());
 		//System.out.println(Short.MAX_VALUE * 2);
@@ -1183,7 +1205,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
-		Timestamp curTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp curTimestamp = getUniqueCurrentTimestamp();
 		for(int x=0; x<processes.size(); x++)
 		{
 			((HashMap)processes.get(x)).put("username", userName);
@@ -2140,7 +2162,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextPressQueue = new ConcurrentLinkedQueue();
 						
-						String keyPressInsert = "INSERT IGNORE INTO `dataCollection`.`KeyboardInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `button`, `inputTime` ) VALUES ";
+						String keyPressInsert = "INSERT INTO `dataCollection`.`KeyboardInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `button`, `inputTime` ) VALUES ";
 						String keyPressRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < keyToInsert; x++)
@@ -2371,7 +2393,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			return;
 		}
 		
-		Timestamp newTimestamp = new Timestamp(new Date().getTime()-timeDifference);
+		Timestamp newTimestamp = getUniqueCurrentTimestamp();
 		
 		checkNewInterrupt(myMonitor, timeDifference);
 		//checkNew(myMonitor.getTopWindow(timeDifference));
