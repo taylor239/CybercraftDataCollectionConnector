@@ -817,6 +817,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			System.out.println("Warning: No top window detected for mouse input.");
 			try
 			{
+				checkNewInterrupt(myMonitor, timeDifference);
 				Thread.currentThread().sleep(shortPoll);
 			}
 			catch(InterruptedException e)
@@ -862,6 +863,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			System.out.println("Warning: No top window detected for mouse input.");
 			try
 			{
+				checkNewInterrupt(myMonitor, timeDifference);
 				Thread.currentThread().sleep(shortPoll);
 			}
 			catch(InterruptedException e)
@@ -907,6 +909,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			System.out.println("Warning: No top window detected for mouse input.");
 			try
 			{
+				checkNewInterrupt(myMonitor, timeDifference);
 				Thread.currentThread().sleep(shortPoll);
 			}
 			catch(InterruptedException e)
@@ -957,6 +960,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			System.out.println("Warning: No top window detected for mouse input.");
 			try
 			{
+				checkNewInterrupt(myMonitor, timeDifference);
 				Thread.currentThread().sleep(shortPoll);
 			}
 			catch(InterruptedException e)
@@ -1021,6 +1025,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			System.out.println("Warning: No top window detected for key input.");
 			try
 			{
+				checkNewInterrupt(myMonitor, timeDifference);
 				Thread.currentThread().sleep(shortPoll);
 			}
 			catch(InterruptedException e)
@@ -1067,6 +1072,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			System.out.println("Warning: No top window detected for key input.");
 			try
 			{
+				checkNewInterrupt(myMonitor, timeDifference);
 				Thread.currentThread().sleep(shortPoll);
 			}
 			catch(InterruptedException e)
@@ -1113,6 +1119,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			System.out.println("Warning: No top window detected for key input.");
 			try
 			{
+				checkNewInterrupt(myMonitor, timeDifference);
 				Thread.currentThread().sleep(shortPoll);
 			}
 			catch(InterruptedException e)
