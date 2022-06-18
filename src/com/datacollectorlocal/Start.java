@@ -81,6 +81,9 @@ import oshi.software.os.OperatingSystem;
 
 public class Start implements NativeMouseInputListener, NativeKeyListener, Runnable, ScreenshotListener, PauseListener, MetricListener, ActiveWindowConsumer
 {
+	private VideoFrameCompressor myFrameCompressor;
+	private int keyFrameRate = 10;
+	
 	private int shortPoll = 50;
 	
 	boolean verbose = false;
@@ -106,6 +109,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private String imageCompressionType = "jpg";
 	private double imageCompressionFactor = .5;
+	private String diffMethod = "none";
 	
 	private int screenshotTimeout = 10000;
 	private SimplerScreenshotGenerator myGenerator;
@@ -146,10 +150,16 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private boolean logging = false;
 	
-	public Start(String user, String event, String admin, int screenshot, int process, boolean toLog, boolean toMetric, boolean threadGranularity, String imageCompression, double compressionAmount)
+	public Start(String user, String event, String admin, int screenshot, int process, boolean toLog, boolean toMetric, boolean threadGranularity, String imageCompression, double compressionAmount, String diff)
 	{
 		imageCompressionType = imageCompression;
 		imageCompressionFactor = compressionAmount;
+		diffMethod = diff;
+		
+		if(diffMethod.equals("diff"))
+		{
+			myFrameCompressor = new DiffVideoCompressor(keyFrameRate);
+		}
 		
 		threads = threadGranularity;
 		metrics = toMetric;
@@ -432,14 +442,14 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				myReturn.put("imagecompression", true);
 				myReturn.put("imagecompressiontype", args[x+1]);
 				x++;
-				if(args.length > x && !(args[x + 1].contains("-")))
+				if(args.length > x + 1 && !(args[x + 1].contains("-")))
 				{
 					myReturn.put("imagecompressionlevel", args[x+1]);
 					x++;
 				}
-				if(args.length > x && !(args[x + 1].contains("-")))
+				if(args.length > x + 1 && !(args[x + 1].contains("-")))
 				{
-					myReturn.put("diff", args[x+1]);
+					myReturn.put("diffMethod", args[x+1]);
 					x++;
 				}
 			}
@@ -548,8 +558,13 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			compressionAmount = Double.parseDouble((String) configuration.get("imagecompressionlevel"));
 		}
+		String diffMethod = "none";
+		if(configuration.containsKey("diffMethod"))
+		{
+			diffMethod = ((String) configuration.get("diffMethod"));
+		}
 		
-		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging, metrics, threadGranularity, compressionType, compressionAmount);
+		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging, metrics, threadGranularity, compressionType, compressionAmount, diffMethod);
 		
 		if(configuration.containsKey("continuous"))
 		{
@@ -2090,8 +2105,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextScreenshotQueue = new ConcurrentLinkedQueue();
 						
-						String screenshotInsert = "INSERT IGNORE INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`) VALUES ";
-						String screenshotRow = "(?, ?, ?, ?, ?, ?)";
+						String screenshotInsert = "INSERT IGNORE INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`, `frameType`, `encoding`) VALUES ";
+						String screenshotRow = "(?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < screenshotsToInsert; x++)
 						{
@@ -2144,6 +2159,12 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							screenshotCount++;
 							
 							screenshotStatement.setBytes(screenshotCount, (byte[]) clickMap[1]);
+							screenshotCount++;
+							
+							screenshotStatement.setString(screenshotCount, (String) clickMap[4]);
+							screenshotCount++;
+							
+							screenshotStatement.setString(screenshotCount, (String) clickMap[3]);
 							screenshotCount++;
 							
 							
@@ -2404,7 +2425,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		checkNewInterrupt(myMonitor, timeDifference);
 		//checkNew(myMonitor.getTopWindow(timeDifference));
-		Object[] myPair = new Object[3];
+		Object[] myPair = new Object[5];
 		
 		try
 		{
@@ -2415,28 +2436,45 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			
 			//System.out.println("Comp type: " + imageCompressionType);
 			
-			if(imageCompressionType.equals("jpg"))
+			if(diffMethod.equals("none"))
 			{
-				JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
-				jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-				jpegParams.setCompressionQuality((float) imageCompressionFactor);
-				myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), jpegParams);
-			}
-			else if(imageCompressionType.equals("png"))
-			{
-				ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
-				if(pngParam.canWriteCompressed())
+				myPair[4] = "key";
+				if(imageCompressionType.equals("jpg"))
 				{
-					pngParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-					pngParam.setCompressionQuality(0.0f);
+					JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
+					jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+					jpegParams.setCompressionQuality((float) imageCompressionFactor);
+					myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), jpegParams);
 				}
-				myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), pngParam);
+				else if(imageCompressionType.equals("png"))
+				{
+					ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
+					if(pngParam.canWriteCompressed())
+					{
+						pngParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+						pngParam.setCompressionQuality((float) imageCompressionFactor);
+					}
+					myWriter.write(null, new IIOImage((RenderedImage) screenshot, null, null), pngParam);
+				}
+				
+				myPair[0] = newTimestamp;//new Timestamp(timeTaken.getTime());
+				myPair[1] = toByte.toByteArray();
+				myPair[2] = userName;
+				myPair[3] = imageCompressionType;
+				screenshotsToWrite.add(myPair);
+			}
+			else
+			{
+				HashMap compressedMap = myFrameCompressor.compressNextFrame((RenderedImage) screenshot);
+				
+				myPair[0] = newTimestamp;//new Timestamp(timeTaken.getTime());
+				myPair[1] = compressedMap.get("bytes");
+				myPair[2] = userName;
+				myPair[3] = imageCompressionType;
+				myPair[4] = compressedMap.get("frametype");
+				screenshotsToWrite.add(myPair);
 			}
 			
-			myPair[0] = newTimestamp;//new Timestamp(timeTaken.getTime());
-			myPair[1] = toByte.toByteArray();
-			myPair[2] = userName;
-			screenshotsToWrite.add(myPair);
 		}
 		catch(Exception e)
 		{
