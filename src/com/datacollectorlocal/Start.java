@@ -86,9 +86,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private int shortPoll = 50;
 	
-	boolean verbose = false;
+	private boolean verbose = false;
 	
-	boolean metrics = false;
+	private boolean metrics = false;
+	
+	private int numCompareThreads = 2;
 	
 	private Thread myThread;
 	private static ArrayList windowsToClose = new ArrayList();
@@ -158,7 +160,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		if(diffMethod.equals("diff"))
 		{
-			myFrameCompressor = new DiffVideoCompressor(keyFrameRate);
+			myFrameCompressor = new DiffVideoCompressor(keyFrameRate, numCompareThreads, imageCompressionType, imageCompressionFactor);
 		}
 		
 		threads = threadGranularity;

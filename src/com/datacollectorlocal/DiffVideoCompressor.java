@@ -10,12 +10,14 @@ import java.awt.image.DataBuffer;
 import java.awt.image.RenderedImage;
 import java.awt.image.WritableRaster;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
 import javax.imageio.stream.ImageOutputStream;
 
 public class DiffVideoCompressor implements VideoFrameCompressor
@@ -24,19 +26,115 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 	private RenderedImage lastImage = null;
 	private int keyFrameInterval = 1;
 	private int frameCount = 0;
+	private int threadCount;
+	private boolean running = true;
+	private int sleepTime = 20;
+	
+	private String imageCompressionType;
+	private double imageCompressionFactor;
+	
+	private ArrayList<ImageSegmentProcessor> threadList = new ArrayList();
+	
+	private class ImageSegmentProcessor implements Runnable
+	{
+		private int sleepTime = 20;
+		private int sliceNum, totalNum;
+		private RenderedImage toDiff = null;
+		private BufferedImage toWrite = null;
+		public Thread executingThread;
+		
+		public ImageSegmentProcessor(int mySlice, int myTotal)
+		{
+			sliceNum = mySlice;
+			totalNum = myTotal;
+			
+			executingThread = new Thread(this);
+			executingThread.start();
+		}
+		
+		public boolean getDone()
+		{
+			return toDiff == null;
+		}
+		
+		/**
+		 * Adds a new image to diff to the parent class LastImage.
+		 * @param nextImage the image to compare.
+		 * @param writeImage the diff image to output to.
+		 */
+		public void addImage(RenderedImage nextImage, BufferedImage writeImage)
+		{
+			toWrite = writeImage;
+			toDiff = nextImage;
+		}
+
+		@Override
+		public void run()
+		{
+			while(running)
+			{
+				if(toDiff != null)
+				{
+					//We divide work by having threads process only 1/total threads
+					//of the columns.  This is not a perfect solution but should
+					//work fine.
+					for(int x = sliceNum; x < toDiff.getWidth(); x+= totalNum)
+					{
+						for(int y = 0; y < toDiff.getHeight(); y++)
+						{
+							if(((BufferedImage)toDiff).getRGB(x, y) != ((BufferedImage)lastImage).getRGB(x, y))
+							{
+								//diffFrame.setRGB(x, y, 0);
+								toWrite.setRGB(x, y, ((BufferedImage)toDiff).getRGB(x, y));
+							}
+						}
+					}
+					
+					toDiff = null;
+				}
+				try
+				{
+					Thread.currentThread().sleep(sleepTime);
+				}
+				catch(InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+		
+	}
 	
 	/**
 	 * A class which compresses sequential images by diff-ing
 	 * the next image with the previous one.  Any different
 	 * pixels are set, and the rest are transparent.  Then
 	 * the final image is compressed.  This method uses PNG
-	 * encoding only currently, since lossy comrpession
+	 * encoding only currently, since lossy compression
 	 * techniques can cause issues with pixel matching.
 	 * @param keyInterval
 	 */
-	public DiffVideoCompressor(int keyInterval)
+	public DiffVideoCompressor(int keyInterval, int numThreads, String compType, double compFactor)
 	{
+		imageCompressionType = compType;
+		imageCompressionFactor = compFactor;
 		keyFrameInterval = keyInterval;
+		for(int x = 0; x < numThreads; x++)
+		{
+			threadList.add(new ImageSegmentProcessor(x, numThreads));
+		}
+	}
+	
+	private boolean isReady()
+	{
+		for(int x = 0; x < threadList.size(); x++)
+		{
+			if(!threadList.get(x).getDone())
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	private BufferedImage deepCopy(BufferedImage bi)
@@ -75,6 +173,7 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 			{
 				frameCount = 0;
 				
+				/* Old png-only version
 				ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
 				if(pngParam.canWriteCompressed())
 				{
@@ -82,6 +181,25 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 					pngParam.setCompressionQuality(0.0f);
 				}
 				myWriter.write(null, new IIOImage((RenderedImage) toCompress, null, null), pngParam);
+				*/
+				
+				if(imageCompressionType.equals("jpg"))
+				{
+					JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
+					jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+					jpegParams.setCompressionQuality((float) imageCompressionFactor);
+					myWriter.write(null, new IIOImage((RenderedImage) toCompress, null, null), jpegParams);
+				}
+				else if(imageCompressionType.equals("png"))
+				{
+					ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
+					if(pngParam.canWriteCompressed())
+					{
+						pngParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+						pngParam.setCompressionQuality((float) imageCompressionFactor);
+					}
+					myWriter.write(null, new IIOImage((RenderedImage) toCompress, null, null), pngParam);
+				}
 				
 				myReturn.put("bytes", toByte.toByteArray());
 				myReturn.put("frametype", "key");
@@ -90,6 +208,19 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 			{
 				//BufferedImage diffFrame = deepCopy((BufferedImage) toCompress);
 				BufferedImage diffFrame = new BufferedImage(toCompress.getWidth(), toCompress.getHeight(), BufferedImage.TYPE_INT_ARGB);
+				
+				for(int x = 0; x < threadList.size(); x++)
+				{
+					threadList.get(x).addImage(toCompress, diffFrame);
+				}
+				while(!isReady())
+				{
+					Thread.currentThread().sleep(sleepTime);
+				}
+				
+				
+				
+				/* The single threaded way...
 				for(int x = 0; x < toCompress.getWidth(); x++)
 				{
 					for(int y = 0; y < toCompress.getHeight(); y++)
@@ -101,7 +232,9 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 						}
 					}
 				}
+				*/
 				
+				/*
 				ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
 				if(pngParam.canWriteCompressed())
 				{
@@ -109,6 +242,25 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 					pngParam.setCompressionQuality(0.0f);
 				}
 				myWriter.write(null, new IIOImage(diffFrame, null, null), pngParam);
+				*/
+				
+				if(imageCompressionType.equals("jpg"))
+				{
+					JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
+					jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+					jpegParams.setCompressionQuality((float) imageCompressionFactor);
+					myWriter.write(null, new IIOImage((RenderedImage) diffFrame, null, null), jpegParams);
+				}
+				else if(imageCompressionType.equals("png"))
+				{
+					ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
+					if(pngParam.canWriteCompressed())
+					{
+						pngParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+						pngParam.setCompressionQuality((float) imageCompressionFactor);
+					}
+					myWriter.write(null, new IIOImage((RenderedImage) diffFrame, null, null), pngParam);
+				}
 				
 				myReturn.put("bytes", toByte.toByteArray());
 				myReturn.put("frametype", "diff");
