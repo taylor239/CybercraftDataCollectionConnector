@@ -2,6 +2,7 @@ package com.datacollectorlocal;
 
 
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.image.RenderedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -161,6 +162,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		if(diffMethod.equals("diff"))
 		{
 			myFrameCompressor = new DiffVideoCompressor(keyFrameRate, numCompareThreads, imageCompressionType, imageCompressionFactor);
+		}
+		if(diffMethod.equals("boundrect"))
+		{
+			myFrameCompressor = new BoundVideoCompressor(keyFrameRate, imageCompressionType, imageCompressionFactor);
 		}
 		
 		threads = threadGranularity;
@@ -713,6 +718,57 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			myMonitor.interruptSleep(diff);
 		}
+		if(currentWindowData == null || currentWindowData.isEmpty())
+		{
+			getEmptyWindow();
+		}
+	}
+	
+	public synchronized void getEmptyWindow()
+	{
+		/*
+		//HashMap processInfo = myProcMonitor.getProcessInfo((int)curWindow.getOwningProcessId());
+		
+		HashMap myReturn = new ProcessMap();
+		
+		myReturn.put("USER", curProc.getUser());
+		myReturn.put("PID", curProc.getProcessID());
+		myReturn.put("%CPU", 100d * (curProc.getKernelTime() + curProc.getUserTime()) / curProc.getUpTime());
+		myReturn.put("%MEM", 100d * curProc.getResidentSetSize() / hal.getMemory().getTotal());
+		myReturn.put("VSZ", (curProc.getVirtualSize()));
+		myReturn.put("RSS", (curProc.getResidentSetSize()));
+		myReturn.put("TTY", "");
+		myReturn.put("STAT", curProc.getState().name());
+		myReturn.put("START", curProc.getStartTime());
+		myReturn.put("TIME", curProc.getUpTime());
+		String commandLine = curProc.getCommandLine();
+		myReturn.put("PARENTPID", curProc.getParentProcessID());
+		String[] splited = commandLine.split(" (?=\")|(?<=\")\\s");
+		myReturn.put("COMMAND", curProc.getName());
+		
+		HashMap windowMap = new HashMap();
+		
+		windowMap.put("WindowID", curWindow.getWindowId());
+		windowMap.put("WindowTitle", curWindow.getTitle());
+		
+		//System.out.println(curWindow.getTitle());
+		
+		windowMap.put("WindowFirstClass", processInfo.get("COMMAND"));
+		windowMap.put("WindowSecondClass", processInfo.get("ARGS"));
+		windowMap.put("WindowPID", "" + curWindow.getOwningProcessId());
+		windowMap.put("ProcessInfo", processInfo);
+		windowMap.put("x", windowRect.getX());
+		windowMap.put("y", windowRect.getY());
+		windowMap.put("width", windowRect.getWidth());
+		windowMap.put("height", windowRect.getHeight());
+		
+		windowMap.put("IsFocus", "0");
+		
+		Arra
+		yList toConsume = new ArrayList();
+		toConsume.add(windowMap);
+		consumeWindowList(toConsume);
+		*/
 	}
 	
 	/**
@@ -720,7 +776,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	 * This window list is queued to write to disk.
 	 * @param newWindows The latest window list from OSHI.
 	 */
-	public void consumeWindowList(ArrayList newWindows)
+	public synchronized void consumeWindowList(ArrayList newWindows)
 	{
 		if(paused)
 		{
@@ -2107,8 +2163,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextScreenshotQueue = new ConcurrentLinkedQueue();
 						
-						String screenshotInsert = "INSERT IGNORE INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`, `frameType`, `encoding`) VALUES ";
-						String screenshotRow = "(?, ?, ?, ?, ?, ?, ?, ?)";
+						String screenshotInsert = "INSERT IGNORE INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`, `frameType`, `encoding`, `xStart`, `yStart`) VALUES ";
+						String screenshotRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < screenshotsToInsert; x++)
 						{
@@ -2167,6 +2223,12 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							screenshotCount++;
 							
 							screenshotStatement.setString(screenshotCount, (String) clickMap[3]);
+							screenshotCount++;
+							
+							screenshotStatement.setInt(screenshotCount, (int) clickMap[5]);
+							screenshotCount++;
+							
+							screenshotStatement.setInt(screenshotCount, (int) clickMap[6]);
 							screenshotCount++;
 							
 							
@@ -2427,7 +2489,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		checkNewInterrupt(myMonitor, timeDifference);
 		//checkNew(myMonitor.getTopWindow(timeDifference));
-		Object[] myPair = new Object[5];
+		Object[] myPair = new Object[7];
 		
 		try
 		{
@@ -2463,6 +2525,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				myPair[1] = toByte.toByteArray();
 				myPair[2] = userName;
 				myPair[3] = imageCompressionType;
+				myPair[5] = 0;
+				myPair[6] = 0;
 				screenshotsToWrite.add(myPair);
 			}
 			else
@@ -2474,6 +2538,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				myPair[2] = userName;
 				myPair[3] = imageCompressionType;
 				myPair[4] = compressedMap.get("frametype");
+				myPair[5] = compressedMap.get("x");
+				myPair[6] = compressedMap.get("y");
 				screenshotsToWrite.add(myPair);
 			}
 			

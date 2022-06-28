@@ -30,6 +30,8 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 	private boolean running = true;
 	private int sleepTime = 20;
 	
+	private Thread interruptThread = null;
+	
 	private String imageCompressionType;
 	private double imageCompressionFactor;
 	
@@ -91,6 +93,11 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 					}
 					
 					toDiff = null;
+					
+					if(interruptThread != null && interruptThread.getState() == Thread.State.WAITING || interruptThread.getState() == Thread.State.TIMED_WAITING)
+					{
+						interruptThread.interrupt();
+					}
 				}
 				try
 				{
@@ -150,6 +157,7 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 	@Override
 	public synchronized HashMap compressNextFrame(RenderedImage toCompress)
 	{
+		interruptThread = Thread.currentThread();
 		frameCount++;
 		HashMap myReturn = new HashMap();
 		
@@ -160,7 +168,7 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 		{
 			ByteArrayOutputStream toByte = new ByteArrayOutputStream();
 			ImageOutputStream imageOutput = ImageIO.createImageOutputStream(toByte);
-			ImageWriter myWriter = ImageIO.getImageWritersByFormatName("png").next();
+			ImageWriter myWriter = ImageIO.getImageWritersByFormatName(imageCompressionType).next();
 			myWriter.setOutput(imageOutput);
 			
 			if
@@ -215,7 +223,14 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 				}
 				while(!isReady())
 				{
-					Thread.currentThread().sleep(sleepTime);
+					try
+					{
+						Thread.currentThread().sleep(sleepTime);
+					}
+					catch(Exception e)
+					{
+						
+					}
 				}
 				
 				
