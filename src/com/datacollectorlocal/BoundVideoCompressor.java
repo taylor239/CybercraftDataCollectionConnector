@@ -125,6 +125,10 @@ public class BoundVideoCompressor implements VideoFrameCompressor
 			}
 			curImageNum++;
 			toDiff = nextImage;
+			if(executingThread != null && executingThread.getState() == Thread.State.WAITING || executingThread.getState() == Thread.State.TIMED_WAITING)
+			{
+				executingThread.interrupt();
+			}
 		}
 		
 		private int minX, minY, maxX, maxY;
@@ -311,7 +315,7 @@ public class BoundVideoCompressor implements VideoFrameCompressor
 				}
 				catch(InterruptedException e)
 				{
-					e.printStackTrace();
+					//e.printStackTrace();
 				}
 			}
 		}
@@ -339,7 +343,9 @@ public class BoundVideoCompressor implements VideoFrameCompressor
 		}
 		for(int x = 0; x < threadCount; x++)
 		{
-			new Thread(threadList.get(x)).start();
+			Thread tmpThread = new Thread(threadList.get(x));
+			threadList.get(x).executingThread = tmpThread;
+			tmpThread.start();
 		}
 	}
 	
@@ -499,12 +505,13 @@ public class BoundVideoCompressor implements VideoFrameCompressor
 						myWriter.write(null, new IIOImage((RenderedImage) diffFrame, null, null), pngParam);
 					}
 					myReturn.put("bytes", toByte.toByteArray());
-					myReturn.put("frametype", "diff");
+					myReturn.put("frametype", "seg");
 				}
 				else
 				{
-					myReturn.put("bytes", new byte[0]);
-					myReturn.put("frametype", "empty");
+					//System.out.println("Empty frame, ignoring.");
+					myReturn.put("bytes", null);
+					myReturn.put("frametype", null);
 				}
 			}
 			

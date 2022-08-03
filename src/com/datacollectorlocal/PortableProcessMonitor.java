@@ -76,7 +76,6 @@ public class PortableProcessMonitor implements Runnable
 		
 		OSProcess myProc = os.getProcess(pid);
 		toReturn = toProcMap(myProc);
-		
 		return toReturn;
 	}
 	
@@ -89,7 +88,10 @@ public class PortableProcessMonitor implements Runnable
 	
 	public HashMap toProcMap(OSProcess curProc)
 	{
-		
+		if(curProc == null)
+		{
+			return null;
+		}
 		
 		HashMap myReturn = new ProcessMap();
 		

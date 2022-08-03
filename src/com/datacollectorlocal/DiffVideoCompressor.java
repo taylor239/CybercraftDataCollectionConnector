@@ -44,6 +44,8 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 		private RenderedImage toDiff = null;
 		private BufferedImage toWrite = null;
 		public Thread executingThread;
+		private boolean foundChanges = false;
+		
 		
 		public ImageSegmentProcessor(int mySlice, int myTotal)
 		{
@@ -59,6 +61,11 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 			return toDiff == null;
 		}
 		
+		public boolean foundChanges()
+		{
+			return foundChanges;
+		}
+		
 		/**
 		 * Adds a new image to diff to the parent class LastImage.
 		 * @param nextImage the image to compare.
@@ -66,8 +73,13 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 		 */
 		public void addImage(RenderedImage nextImage, BufferedImage writeImage)
 		{
+			foundChanges = false;
 			toWrite = writeImage;
 			toDiff = nextImage;
+			if(executingThread != null && executingThread.getState() == Thread.State.WAITING || executingThread.getState() == Thread.State.TIMED_WAITING)
+			{
+				executingThread.interrupt();
+			}
 		}
 
 		@Override
@@ -88,6 +100,7 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 							{
 								//diffFrame.setRGB(x, y, 0);
 								toWrite.setRGB(x, y, ((BufferedImage)toDiff).getRGB(x, y));
+								foundChanges = true;
 							}
 						}
 					}
@@ -105,7 +118,7 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 				}
 				catch(InterruptedException e)
 				{
-					e.printStackTrace();
+					//e.printStackTrace();
 				}
 			}
 		}
@@ -142,6 +155,18 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 			}
 		}
 		return true;
+	}
+	
+	private boolean changesDetected()
+	{
+		for(int x = 0; x < threadList.size(); x++)
+		{
+			if(threadList.get(x).foundChanges())
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	private BufferedImage deepCopy(BufferedImage bi)
@@ -258,32 +283,41 @@ public class DiffVideoCompressor implements VideoFrameCompressor
 				}
 				myWriter.write(null, new IIOImage(diffFrame, null, null), pngParam);
 				*/
-				
-				if(imageCompressionType.equals("jpg"))
+				if(changesDetected())
 				{
-					JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
-					jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-					jpegParams.setCompressionQuality((float) imageCompressionFactor);
-					myWriter.write(null, new IIOImage((RenderedImage) diffFrame, null, null), jpegParams);
-				}
-				else if(imageCompressionType.equals("png"))
-				{
-					ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
-					if(pngParam.canWriteCompressed())
+					if(imageCompressionType.equals("jpg"))
 					{
-						pngParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-						pngParam.setCompressionQuality((float) imageCompressionFactor);
+						JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
+						jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+						jpegParams.setCompressionQuality((float) imageCompressionFactor);
+						myWriter.write(null, new IIOImage((RenderedImage) diffFrame, null, null), jpegParams);
 					}
-					myWriter.write(null, new IIOImage((RenderedImage) diffFrame, null, null), pngParam);
+					else if(imageCompressionType.equals("png"))
+					{
+						ImageWriteParam pngParam = myWriter.getDefaultWriteParam();
+						if(pngParam.canWriteCompressed())
+						{
+							pngParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+							pngParam.setCompressionQuality((float) imageCompressionFactor);
+						}
+						myWriter.write(null, new IIOImage((RenderedImage) diffFrame, null, null), pngParam);
+					}
+					
+					myReturn.put("bytes", toByte.toByteArray());
+					myReturn.put("frametype", "diff");
 				}
-				
-				myReturn.put("bytes", toByte.toByteArray());
-				myReturn.put("frametype", "diff");
+				else
+				{
+					myReturn.put("bytes", null);
+					myReturn.put("frametype", null);
+				}
 			}
 			
 		}
 		catch(Exception e)
 		{
+			myReturn.put("bytes", null);
+			myReturn.put("frametype", null);
 			e.printStackTrace();
 		}
 		lastImage = toCompress;

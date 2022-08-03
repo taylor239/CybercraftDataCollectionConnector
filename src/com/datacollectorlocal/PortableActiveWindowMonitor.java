@@ -99,6 +99,13 @@ public class PortableActiveWindowMonitor implements Runnable
 			OSDesktopWindow curWindow = windows.get(x);
 			
 			HashMap processInfo = myProcMonitor.getProcessInfo((int)curWindow.getOwningProcessId());
+			
+			if(processInfo == null)
+			{
+				System.out.println("Warning: Got window with no process: " + curWindow.getTitle());
+				continue;
+			}
+			
 			Rectangle windowRect = curWindow.getLocAndSize();
 			
 			HashMap windowMap = new HashMap();

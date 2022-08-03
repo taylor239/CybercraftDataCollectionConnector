@@ -91,7 +91,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	
 	private boolean metrics = false;
 	
-	private int numCompareThreads = 2;
+	private int numCompareThreads = 4;
 	
 	private Thread myThread;
 	private static ArrayList windowsToClose = new ArrayList();
@@ -764,8 +764,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		windowMap.put("IsFocus", "0");
 		
-		Arra
-		yList toConsume = new ArrayList();
+		ArrayList toConsume = new ArrayList();
 		toConsume.add(windowMap);
 		consumeWindowList(toConsume);
 		*/
@@ -801,7 +800,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			metricTime = metricTime - System.currentTimeMillis();
 			recordMetric("Window Detection", metricTime, "ms");
 			
-			//System.out.println("Window is null.");
+			System.out.println("Top window is null. List size is: " + newWindows.size());
 			
 			return;
 		}
@@ -2532,15 +2531,17 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			else
 			{
 				HashMap compressedMap = myFrameCompressor.compressNextFrame((RenderedImage) screenshot);
-				
-				myPair[0] = newTimestamp;//new Timestamp(timeTaken.getTime());
-				myPair[1] = compressedMap.get("bytes");
-				myPair[2] = userName;
-				myPair[3] = imageCompressionType;
-				myPair[4] = compressedMap.get("frametype");
-				myPair[5] = compressedMap.get("x");
-				myPair[6] = compressedMap.get("y");
-				screenshotsToWrite.add(myPair);
+				if(compressedMap.get("frametype") != null)
+				{
+					myPair[0] = newTimestamp;//new Timestamp(timeTaken.getTime());
+					myPair[1] = compressedMap.get("bytes");
+					myPair[2] = userName;
+					myPair[3] = imageCompressionType;
+					myPair[4] = compressedMap.get("frametype");
+					myPair[5] = compressedMap.get("x");
+					myPair[6] = compressedMap.get("y");
+					screenshotsToWrite.add(myPair);
+				}
 			}
 			
 		}
