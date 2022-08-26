@@ -724,50 +724,65 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		}
 	}
 	
-	public synchronized void getEmptyWindow()
+	private HashMap emptyProcess = null;
+	public HashMap getEmptyProcess()
 	{
-		/*
-		//HashMap processInfo = myProcMonitor.getProcessInfo((int)curWindow.getOwningProcessId());
+		
+		if(emptyProcess != null)
+		{
+			return emptyProcess;
+		}
 		
 		HashMap myReturn = new ProcessMap();
 		
-		myReturn.put("USER", curProc.getUser());
-		myReturn.put("PID", curProc.getProcessID());
-		myReturn.put("%CPU", 100d * (curProc.getKernelTime() + curProc.getUserTime()) / curProc.getUpTime());
-		myReturn.put("%MEM", 100d * curProc.getResidentSetSize() / hal.getMemory().getTotal());
-		myReturn.put("VSZ", (curProc.getVirtualSize()));
-		myReturn.put("RSS", (curProc.getResidentSetSize()));
+		myReturn.put("USER", "NONE");
+		myReturn.put("PID", -1);
+		myReturn.put("%CPU", 0);
+		myReturn.put("%MEM", 0);
+		myReturn.put("VSZ", (long)0);
+		myReturn.put("RSS", (long)0);
 		myReturn.put("TTY", "");
-		myReturn.put("STAT", curProc.getState().name());
-		myReturn.put("START", curProc.getStartTime());
-		myReturn.put("TIME", curProc.getUpTime());
-		String commandLine = curProc.getCommandLine();
-		myReturn.put("PARENTPID", curProc.getParentProcessID());
-		String[] splited = commandLine.split(" (?=\")|(?<=\")\\s");
-		myReturn.put("COMMAND", curProc.getName());
+		myReturn.put("STAT", "NONE");
+		myReturn.put("START", (long)0);
+		myReturn.put("TIME", (long)0);
+		String commandLine = "NONE";
+		myReturn.put("PARENTPID", -1);
+		myReturn.put("COMMAND", "");
+		
+		emptyProcess = myReturn;
+		
+		return myReturn;
+	}
+	
+	public synchronized void getEmptyWindow()
+	{
+		
+		//HashMap processInfo = myProcMonitor.getProcessInfo((int)curWindow.getOwningProcessId());
+		
+		
 		
 		HashMap windowMap = new HashMap();
 		
-		windowMap.put("WindowID", curWindow.getWindowId());
-		windowMap.put("WindowTitle", curWindow.getTitle());
+		windowMap.put("WindowID", "-1");
+		windowMap.put("WindowTitle", "NONE");
 		
 		//System.out.println(curWindow.getTitle());
 		
-		windowMap.put("WindowFirstClass", processInfo.get("COMMAND"));
-		windowMap.put("WindowSecondClass", processInfo.get("ARGS"));
-		windowMap.put("WindowPID", "" + curWindow.getOwningProcessId());
-		windowMap.put("ProcessInfo", processInfo);
-		windowMap.put("x", windowRect.getX());
-		windowMap.put("y", windowRect.getY());
-		windowMap.put("width", windowRect.getWidth());
-		windowMap.put("height", windowRect.getHeight());
+		windowMap.put("WindowFirstClass", "NONE");
+		windowMap.put("WindowSecondClass", "NONE");
+		windowMap.put("WindowPID", "-1");
+		windowMap.put("ProcessInfo", getEmptyProcess());
+		windowMap.put("x", 0.0);
+		windowMap.put("y", 0.0);
+		windowMap.put("width", 0.0);
+		windowMap.put("height", 0.0);
 		
-		windowMap.put("IsFocus", "0");
+		windowMap.put("IsFocus", "1");
 		
 		ArrayList toConsume = new ArrayList();
 		toConsume.add(windowMap);
 		consumeWindowList(toConsume);
-		*/
+		
 	}
 	
 	/**
