@@ -743,7 +743,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		myReturn.put("RSS", (long)0);
 		myReturn.put("TTY", "");
 		myReturn.put("STAT", "NONE");
-		myReturn.put("START", (long)0);
+		myReturn.put("START", System.currentTimeMillis());
 		myReturn.put("TIME", (long)0);
 		String commandLine = "NONE";
 		myReturn.put("PARENTPID", -1);
@@ -755,6 +755,15 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	}
 	
 	public synchronized void getEmptyWindow()
+	{
+		HashMap windowMap = getEmptyWindowMap();
+		
+		ArrayList toConsume = new ArrayList();
+		toConsume.add(windowMap);
+		consumeWindowList(toConsume);
+	}
+	
+	public synchronized HashMap getEmptyWindowMap()
 	{
 		
 		//HashMap processInfo = myProcMonitor.getProcessInfo((int)curWindow.getOwningProcessId());
@@ -779,9 +788,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		windowMap.put("IsFocus", "1");
 		
-		ArrayList toConsume = new ArrayList();
-		toConsume.add(windowMap);
-		consumeWindowList(toConsume);
+		return windowMap;
 		
 	}
 	
@@ -815,7 +822,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			metricTime = metricTime - System.currentTimeMillis();
 			recordMetric("Window Detection", metricTime, "ms");
 			
-			System.out.println("Top window is null. List size is: " + newWindows.size());
+			HashMap defWindowMap = getEmptyWindowMap();
+			newWindow = defWindowMap;
+			newWindows.add(defWindowMap);
+			
+			System.out.println("Top window is null, using default. List size is: " + newWindows.size());
 			
 			return;
 		}
