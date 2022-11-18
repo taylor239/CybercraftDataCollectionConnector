@@ -636,6 +636,12 @@ public class DataAggregator implements Runnable
 				//totalObjects.put("totalToDo", totalToDo);
 				//totalObjects.put("totalDone", currentDone);
 				
+				System.out.println("Windows detected:");
+				String windowJSON = gson.toJson(totalObjects.get("Window"));
+				System.out.println(windowJSON);
+				windowJSON = gson.toJson(totalObjects.get("WindowDetails"));
+				System.out.println(windowJSON);
+				
 				String totalJSON = gson.toJson(totalObjects);
 				//System.out.println("Total: " + totalJSON);
 				//Writer tmpFile = new FileWriter("/home/osboxes/Desktop/empty.txt");
