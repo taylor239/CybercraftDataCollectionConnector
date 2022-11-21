@@ -1350,6 +1350,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 	public void run()
 	{
 		running = true;
+		boolean commitUser = true;
 		System.out.println("Running in session " + sessionToken);
 		//if(true)
 		//	return;
@@ -1399,33 +1400,50 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 				//checkNew(myMonitor.getTopWindow(timeDifference));
 				if(count > 5 && !windowsToWrite.isEmpty() || !clicksToWrite.isEmpty() || !screenshotsToWrite.isEmpty())
 				{
-					long startEventInsert = System.currentTimeMillis();
-					if(verbose)
-						System.out.println("Recording user JIC");
+					if(commitUser)
+					{
+						while(true)
+						{
+							try
+							{
+								System.out.println("Recording new event and user:\n" + eventName + ":" + adminEmail + "\n" + sessionToken);
+								long startEventInsert = System.currentTimeMillis();
+								if(verbose)
+									System.out.println("Recording user JIC");
+								
+								String eventInsert = "INSERT IGNORE INTO `dataCollection`.`Event` (`event`, `adminEmail`) VALUES ";
+								String eventRow = "(?, ?)";
+								eventInsert += eventRow;
+								PreparedStatement eventStatement = myConnection.prepareStatement(eventInsert);
+								eventStatement.setString(1, eventName);
+								eventStatement.setString(2, adminEmail);
+								eventStatement.execute();
+								eventStatement.close();
+								
+								String userInsert = "INSERT IGNORE INTO `dataCollection`.`User` (`username`, `adminEmail`, `session`, `event`, `sessionEnvironment`) VALUES ";
+								String userRow = "(?, ?, ?, ?, ?)";
+								userInsert += userRow;
+								PreparedStatement userStatement = myConnection.prepareStatement(userInsert);
+								userStatement.setString(1, userName);
+								userStatement.setString(2, adminEmail);
+								userStatement.setString(3, sessionToken);
+								userStatement.setString(4, eventName);
+								userStatement.setString(5, "" + os + " " + hal.getComputerSystem() + " " + hal.getProcessor());
+								userStatement.execute();
+								userStatement.close();
+								myConnection.commit();
+								commitUser = false;
+								long endEventInsert = System.currentTimeMillis() - startEventInsert;
+								recordMetric("Event Data Write Time", endEventInsert, "ms");
+								break;
+							}
+							catch(Exception e)
+							{
+								e.printStackTrace();
+							}
+						}
+					}
 					
-					String eventInsert = "INSERT IGNORE INTO `dataCollection`.`Event` (`event`, `adminEmail`) VALUES ";
-					String eventRow = "(?, ?)";
-					eventInsert += eventRow;
-					PreparedStatement eventStatement = myConnection.prepareStatement(eventInsert);
-					eventStatement.setString(1, eventName);
-					eventStatement.setString(2, adminEmail);
-					eventStatement.execute();
-					eventStatement.close();
-					
-					String userInsert = "INSERT IGNORE INTO `dataCollection`.`User` (`username`, `adminEmail`, `session`, `event`, `sessionEnvironment`) VALUES ";
-					String userRow = "(?, ?, ?, ?, ?)";
-					userInsert += userRow;
-					PreparedStatement userStatement = myConnection.prepareStatement(userInsert);
-					userStatement.setString(1, userName);
-					userStatement.setString(2, adminEmail);
-					userStatement.setString(3, sessionToken);
-					userStatement.setString(4, eventName);
-					userStatement.setString(5, "" + os + " " + hal.getComputerSystem() + " " + hal.getProcessor());
-					userStatement.execute();
-					userStatement.close();
-					
-					long endEventInsert = System.currentTimeMillis() - startEventInsert;
-					recordMetric("Event Data Write Time", endEventInsert, "ms");
 					
 					if(curAggregator != null)
 					{
