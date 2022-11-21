@@ -50,6 +50,13 @@ public class DataAggregator implements Runnable
 	private long maxDiffCeiling = 600000000;
 	private long maxDiffFloor = 600;
 	
+	private boolean sendMoreSessionNames = true;
+	
+	public void setSendMoreSessionNames(boolean toSend)
+	{
+		sendMoreSessionNames = toSend;
+	}
+	
 	
 	public static DataAggregator getInstance(String serverAddr, String username, String token, boolean continuous, String event, String admin)
 	{
@@ -127,6 +134,8 @@ public class DataAggregator implements Runnable
 		String selectEarliestTime = "SELECT MIN(`insertTimestamp`) FROM (SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` > ?     UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`MouseInput`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Process`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessArgs`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`ProcessAttributes`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Screenshot`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Task`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`TaskEvent`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`User`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`Window`  WHERE `insertTimestamp` > ?    UNION SELECT IFNULL(MIN(`insertTimestamp`), UTC_TIMESTAMP(3)) AS `insertTimestamp` FROM `dataCollection`.`WindowDetails`  WHERE `insertTimestamp` > ?) AS `subQuery`";
 		
 		running = true;
+		boolean sentFirst = false;
+		boolean sendOneLastSession = true;
 		
 		String currentTimeQuery = "SELECT UTC_TIMESTAMP(3)";
 		String initSelectScreenshotSizeLimit = "SELECT COUNT(*) FROM `dataCollection`.`Screenshot` WHERE `insertTimestamp` <= ? AND `insertTimestamp` >= ?";
@@ -358,25 +367,32 @@ public class DataAggregator implements Runnable
 				totalObjects.put("event", myEvent);
 				totalObjects.put("admin", myAdminEmail);
 				
-				myStmt = myConnection.prepareStatement(userSelect);
-				//myStmt.setTimestamp(1, curTimestamp);
-				//myStmt.setTimestamp(2, lastTimestamp);
-				myResults = myStmt.executeQuery();
-				ArrayList userList = new ArrayList();
-				while(myResults.next())
-				{
-					HashMap curMap = new HashMap();
-					
-					int colCount = myResults.getMetaData().getColumnCount();
-					for(int x=1; x<colCount + 1; x++)
-					{
-						curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
-					}
-					
-					userList.add(curMap);
-				}
-				totalObjects.put("User", userList);
 				
+				//System.out.println("User send vars:");
+				//System.out.println("Send more: " + sendMoreSessionNames);
+				//System.out.println("Sent first: " + sentFirst);
+				//System.out.println("Sent one last: " + sendOneLastSession);
+				if(sendOneLastSession)
+				{
+					myStmt = myConnection.prepareStatement(userSelect);
+					//myStmt.setTimestamp(1, curTimestamp);
+					//myStmt.setTimestamp(2, lastTimestamp);
+					myResults = myStmt.executeQuery();
+					ArrayList userList = new ArrayList();
+					while(myResults.next())
+					{
+						HashMap curMap = new HashMap();
+						
+						int colCount = myResults.getMetaData().getColumnCount();
+						for(int x=1; x<colCount + 1; x++)
+						{
+							curMap.put(myResults.getMetaData().getColumnLabel(x), myResults.getString(x));
+						}
+						
+						userList.add(curMap);
+					}
+					totalObjects.put("User", userList);
+				}
 				
 				myStmt = myConnection.prepareStatement(windowSelect);
 				myStmt.setTimestamp(1, curTimestamp);
@@ -636,11 +652,11 @@ public class DataAggregator implements Runnable
 				//totalObjects.put("totalToDo", totalToDo);
 				//totalObjects.put("totalDone", currentDone);
 				
-				System.out.println("Windows detected:");
-				String windowJSON = gson.toJson(totalObjects.get("Window"));
-				System.out.println(windowJSON);
-				windowJSON = gson.toJson(totalObjects.get("WindowDetails"));
-				System.out.println(windowJSON);
+				//System.out.println("Windows detected:");
+				//String windowJSON = gson.toJson(totalObjects.get("Window"));
+				//System.out.println(windowJSON);
+				//windowJSON = gson.toJson(totalObjects.get("WindowDetails"));
+				//System.out.println(windowJSON);
 				
 				String totalJSON = gson.toJson(totalObjects);
 				//System.out.println("Total: " + totalJSON);
@@ -774,6 +790,19 @@ public class DataAggregator implements Runnable
 				
 				if(responseString != null && responseString.equals("{\"result\":\"ok\"}"))
 				{
+					if(sentFirst)
+					{
+						sendOneLastSession = false;
+					}
+					if(!sendMoreSessionNames)
+					{
+						sentFirst = true;
+					}
+					else
+					{
+						sentFirst = false;
+						sendOneLastSession = true;
+					}
 					System.out.println("All OK:");
 					System.out.println(responseString);
 					if(maxTime == null)
@@ -926,6 +955,7 @@ public class DataAggregator implements Runnable
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
 			
 		} while(running);
 	}

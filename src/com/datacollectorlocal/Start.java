@@ -576,6 +576,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		if(configuration.containsKey("continuous"))
 		{
 			DataAggregator currentAggregator = DataAggregator.getInstance((String)configuration.get("collectionServer"), (String)configuration.get("user"), (String)configuration.get("token"), true, eventToStart, adminToStart);
+			myStart.setAggregator(currentAggregator);
 		}
 		
 		if(configuration.containsKey("taskgui"))
@@ -1426,6 +1427,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					long endEventInsert = System.currentTimeMillis() - startEventInsert;
 					recordMetric("Event Data Write Time", endEventInsert, "ms");
 					
+					if(curAggregator != null)
+					{
+						curAggregator.setSendMoreSessionNames(false);
+					}
 					
 					
 					if(verbose)
@@ -1445,20 +1450,25 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					if(toInsert > 0)
 					{
 						long startWindowInsert = System.currentTimeMillis();
-						String processInsert = "INSERT IGNORE INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`, `parentpid`, `parentuser`, `parentstart`) VALUES ";
+						String processInsert = "INSERT INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`, `parentpid`, `parentuser`, `parentstart`) VALUES ";
 						String eachProcessRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String processSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `command` = VALUES(`command`), `parentpid` = VALUES(`parentpid`), `parentuser` = VALUES(`parentuser`), `parentstart` = VALUES(`parentstart`)";
 						
-						String processArgInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessArgs` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `numbered`, `arg`) VALUES ";
+						
+						String processArgInsert = "INSERT INTO `dataCollection`.`ProcessArgs` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `numbered`, `arg`) VALUES ";
 						String eachProcessArgRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String processArgSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `numbered` = VALUES(`numbered`), `arg` = VALUES(`arg`)";
 						//int argCount = 0;
 						
-						String processAttInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
+						String processAttInsert = "INSERT INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
 						String eachProcessAttRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String processAttSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `cpu` = VALUES(`cpu`), `mem` = VALUES(`mem`), `vsz` = VALUES(`vsz`), `rss` = VALUES(`rss`), `tty` = VALUES(`tty`), `stat` = VALUES(`stat`), `time` = VALUES(`time`), `timestamp` = VALUES(`timestamp`)";
 						
-						String windowInsert = "INSERT IGNORE INTO `dataCollection`.`Window` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `firstClass`, `secondClass`) VALUES ";
+						String windowInsert = "INSERT INTO `dataCollection`.`Window` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `firstClass`, `secondClass`) VALUES ";
 						String eachWindowRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String windowSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `xid` = VALUES(`xid`), `firstClass` = VALUES(`firstClass`), `secondClass` = VALUES(`secondClass`)";
 						
-						String windowDetailInsert = "INSERT IGNORE INTO `dataCollection`.`WindowDetails` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `x`, `y`, `width`, `height`, `name`, `timeChanged`, `active`) VALUES ";
+						String windowDetailInsert = "INSERT INTO `dataCollection`.`WindowDetails` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `x`, `y`, `width`, `height`, `name`, `timeChanged`, `active`) VALUES ";
 						String eachWindowDetailRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						boolean hasArgs = false;
@@ -1510,6 +1520,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							}
 						}
 						
+						processInsert += processSuffix;
+						processAttInsert += processAttSuffix;
+						windowInsert += windowSuffix;
+						
 						if(verbose)
 							System.out.println(processInsert);
 						if(verbose)
@@ -1529,6 +1543,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 						//if(verbose)
 						//System.out.println(processArgInsert);
 						PreparedStatement processArgStatement = null;
+						processArgInsert += processArgSuffix;
 						if(hasArgs)
 						{
 							processArgStatement = myConnection.prepareStatement(processArgInsert);
@@ -1735,19 +1750,22 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					if(toInsertProcess > 0)
 					{
 						
-						String processInsert = "INSERT IGNORE INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`, `parentpid`, `parentuser`, `parentstart`) VALUES ";
+						String processInsert = "INSERT INTO `dataCollection`.`Process` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `command`, `parentpid`, `parentuser`, `parentstart`) VALUES ";
 						String eachProcessRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String processSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `command` = VALUES(`command`), `parentpid` = VALUES(`parentpid`), `parentuser` = VALUES(`parentuser`), `parentstart` = VALUES(`parentstart`)";
 						
-						String processArgInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessArgs` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `numbered`, `arg`) VALUES ";
+						String processArgInsert = "INSERT INTO `dataCollection`.`ProcessArgs` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `numbered`, `arg`) VALUES ";
 						String eachProcessArgRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String processArgSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `numbered` = VALUES(`numbered`), `arg` = VALUES(`arg`)";
 						//int argCount = 0;
 						
-						String processAttInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
+						String processAttInsert = "INSERT INTO `dataCollection`.`ProcessAttributes` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `cpu`, `mem`, `vsz`, `rss`, `tty`, `stat`, `time`, `timestamp`) VALUES ";
 						String eachProcessAttRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						String processAttSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `cpu` = VALUES(`cpu`), `mem` = VALUES(`mem`), `vsz` = VALUES(`vsz`), `rss` = VALUES(`rss`), `tty` = VALUES(`tty`), `stat` = VALUES(`stat`), `time` = VALUES(`time`), `timestamp` = VALUES(`timestamp`)";
 						
-						String processThreadInsert = "INSERT IGNORE INTO `dataCollection`.`ProcessThreads` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `name`, `tid`, `tstate`, `tcpu`, `minorfault`, `majorfault`, `tstart`, `priority`, `timestamp`) VALUES ";
+						String processThreadInsert = "INSERT INTO `dataCollection`.`ProcessThreads` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `name`, `tid`, `tstate`, `tcpu`, `minorfault`, `majorfault`, `tstart`, `priority`, `timestamp`) VALUES ";
 						String eachProcessThreadRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-						
+						String processThreadSuffix = " ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `adminEmail` = VALUES(`adminEmail`), `session` = VALUES(`session`), `event` = VALUES(`event`), `user` = VALUES(`user`), `pid` = VALUES(`pid`), `start` = VALUES(`start`), `name` = VALUES(`name`), `tid` = VALUES(`tid`), `tstate` = VALUES(`tstate`), `tcpu` = VALUES(`tcpu`), `minorfault` = VALUES(`minorfault`), `majorfault` = VALUES(`majorfault`), `tstart` = VALUES(`tstart`), `priority` = VALUES(`priority`), `timestamp` = VALUES(`timestamp`)";
 						
 						
 						boolean hasArgs = false;
@@ -1805,6 +1823,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 							}
 						}
 						
+						processInsert += processSuffix;
+						processAttInsert += processAttSuffix;
+						processArgInsert += processArgSuffix;
+						
+						
 						if(verbose)
 							System.out.println(processInsert);
 						if(verbose)
@@ -1826,6 +1849,8 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 								processThreadInsert += eachProcessThreadRow;
 							}
 						}
+						
+						processThreadInsert += processThreadSuffix;
 						
 						
 						
@@ -2083,7 +2108,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextClickQueue = new ConcurrentLinkedQueue();
 						
-						String mouseClickInsert = "INSERT IGNORE INTO `dataCollection`.`MouseInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `xLoc`, `yLoc`, `inputTime`) VALUES ";
+						String mouseClickInsert = "INSERT INTO `dataCollection`.`MouseInput` (`username`, `adminEmail`, `session`, `event`, `user`, `pid`, `start`, `xid`, `timeChanged`, `type`, `xLoc`, `yLoc`, `inputTime`) VALUES ";
 						String mouseClickRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < clickToInsert; x++)
@@ -2188,7 +2213,7 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 					{
 						ConcurrentLinkedQueue nextScreenshotQueue = new ConcurrentLinkedQueue();
 						
-						String screenshotInsert = "INSERT IGNORE INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`, `frameType`, `encoding`, `xStart`, `yStart`) VALUES ";
+						String screenshotInsert = "INSERT INTO `dataCollection`.`Screenshot` (`username`, `adminEmail`, `session`, `event`, `taken`, `screenshot`, `frameType`, `encoding`, `xStart`, `yStart`) VALUES ";
 						String screenshotRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						
 						for(int x=0; x < screenshotsToInsert; x++)
