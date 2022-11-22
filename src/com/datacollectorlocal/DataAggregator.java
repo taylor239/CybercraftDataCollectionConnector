@@ -66,8 +66,6 @@ public class DataAggregator implements Runnable
 			Connection myConnection = myConnectionSource.getDatabaseConnection();
 			while(running)
 			{
-				if(true)
-					return;
 				if(doACheck)
 				{
 					doACheck = false;
@@ -115,6 +113,10 @@ public class DataAggregator implements Runnable
 						{
 							sent = myResults.getLong("totalRows");
 						}
+						else
+						{
+							System.out.println("No results for data sent.");
+						}
 						sentResults.close();
 						sentStmt.close();
 						
@@ -133,6 +135,10 @@ public class DataAggregator implements Runnable
 						if(myResults.next())
 						{
 							remaining = myResults.getLong("totalRows");
+						}
+						else
+						{
+							System.out.println("No results for data to send.");
 						}
 						remainingStmt.close();
 						remainingResults.close();
