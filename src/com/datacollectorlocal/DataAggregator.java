@@ -853,6 +853,8 @@ public class DataAggregator implements Runnable
 				String responseString = mySender.sendWait(compressedString);
 				double sendTime = System.currentTimeMillis() - sendStart;
 				
+				double uploadRate = (double) compressedString.length() / (sendTime / 1000);
+				
 				double maxUploadTime = 100000;
 				
 				double headroom = 1 - (sendTime / maxUploadTime);
@@ -893,8 +895,11 @@ public class DataAggregator implements Runnable
 				String responseString = EntityUtils.toString(entity, "UTF-8");
 				*/
 				
+				boolean isIdle = false;
+				
 				if (totalObjectCount == 0)
 				{
+					isIdle = true;
 					System.out.println("Nothing, fast forward to:");
 					PreparedStatement earliestStmt = myConnection.prepareStatement(selectEarliestTime);
 					earliestStmt.setTimestamp(1, lastTimestamp);
@@ -980,7 +985,14 @@ public class DataAggregator implements Runnable
 					
 					for(int x = 0; x < progressListeners.size(); x++)
 					{
-						progressListeners.get(x).updateStatus("Upload progress OK");
+						if(isIdle)
+						{
+							progressListeners.get(x).updateStatus("Searching for new data...");
+						}
+						else
+						{
+							progressListeners.get(x).updateStatus("Upload progress OK at " + (int)Math.round(uploadRate) + " b/s");
+						}
 					}
 					
 				}
@@ -992,8 +1004,21 @@ public class DataAggregator implements Runnable
 					
 					for(int x = 0; x < progressListeners.size(); x++)
 					{
-						
-						progressListeners.get(x).updateStatus("Upload error, see log");
+						if(isIdle)
+						{
+							progressListeners.get(x).updateStatus("Upload complete");
+						}
+						else
+						{
+							if(responseString == null)
+							{
+								progressListeners.get(x).updateStatus("Upload timeout, throttling speed");
+							}
+							else
+							{
+								progressListeners.get(x).updateStatus("Upload error, see log");
+							}
+						}
 					}
 					
 					if(mySender.isClosing())
