@@ -275,7 +275,7 @@ public class TaskInputGUI extends JFrame implements ActionListener, UploadProgre
 			for(int x=0; x<pauseListeners.size(); x++)
 			{
 				PauseListener curListener = (PauseListener) pauseListeners.get(x);
-				if(pauseButton.getText().equals("Pause"))
+				if(pauseButton.getText().equals("Pause Collection"))
 				{
 					curListener.pause();
 				}
@@ -284,13 +284,13 @@ public class TaskInputGUI extends JFrame implements ActionListener, UploadProgre
 					curListener.resume();
 				}
 			}
-			if(pauseButton.getText().equals("Pause"))
+			if(pauseButton.getText().equals("Pause Collection"))
 			{
-				pauseButton.setText("Resume");
+				pauseButton.setText("Resume Collection");
 			}
 			else
 			{
-				pauseButton.setText("Pause");
+				pauseButton.setText("Pause Collection");
 			}
 		}
 		else if(e.getSource().equals(addButton))
