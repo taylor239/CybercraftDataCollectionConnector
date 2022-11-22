@@ -573,9 +573,11 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		
 		myStart = new Start(userToStart, eventToStart, adminToStart, screenshot, process, logging, metrics, threadGranularity, compressionType, compressionAmount, diffMethod);
 		
+		DataAggregator currentAggregator = null;
+		
 		if(configuration.containsKey("continuous"))
 		{
-			DataAggregator currentAggregator = DataAggregator.getInstance((String)configuration.get("collectionServer"), (String)configuration.get("user"), (String)configuration.get("token"), true, eventToStart, adminToStart);
+			currentAggregator = DataAggregator.getInstance((String)configuration.get("collectionServer"), (String)configuration.get("user"), (String)configuration.get("token"), true, eventToStart, adminToStart);
 			myStart.setAggregator(currentAggregator);
 		}
 		
@@ -585,6 +587,10 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 			myTaskGUI.setSize(400,200);
 			myTaskGUI.addPauseListener(myStart);
 			myTaskGUI.setVisible(true);
+			if(currentAggregator != null)
+			{
+				currentAggregator.addProgressListener(myTaskGUI);
+			}
 			//windowsToClose.add(myTaskGUI);
 		}
 		

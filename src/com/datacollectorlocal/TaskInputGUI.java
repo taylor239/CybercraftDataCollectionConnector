@@ -17,16 +17,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 
 
 import java.awt.Component;
 
-public class TaskInputGUI extends JFrame implements ActionListener
+public class TaskInputGUI extends JFrame implements ActionListener, UploadProgressListener
 {
 	private GridBagConstraints myConstraints;
 	private JTextField taskField;
 	private JButton addButton, pauseButton;
+	private JProgressBar uploadProgress;
+	private JLabel startLabel, endLabel, statusLabel, uploadTitle;
 	private TestingConnectionSource connectionSource = new TestingConnectionSource();
 	private String eventName;
 	private String userName, adminEmail;
@@ -56,7 +59,7 @@ public class TaskInputGUI extends JFrame implements ActionListener
 		resumeMap = new ConcurrentHashMap();
 		restartMap = new ConcurrentHashMap();
 		
-		setTitle("Current Tasks");
+		setTitle("Data Collection");
 		myConstraints = new GridBagConstraints();
 		myConstraints.fill = GridBagConstraints.HORIZONTAL;
 		myConstraints.anchor = GridBagConstraints.CENTER;
@@ -68,7 +71,34 @@ public class TaskInputGUI extends JFrame implements ActionListener
 		getContentPane().setLayout(new GridBagLayout());
 		
 		myConstraints.gridwidth = 3;
-		pauseButton = new JButton("Pause");
+		getContentPane().add(new JLabel("Event: " + eventName), myConstraints);
+		myConstraints.gridy++;
+		
+		getContentPane().add(new JLabel("Current Session: " + session), myConstraints);
+		myConstraints.gridy++;
+		
+		uploadTitle = new JLabel("Upload Progress:");
+		getContentPane().add(uploadTitle, myConstraints);
+		myConstraints.gridy++;
+		
+		uploadProgress = new JProgressBar(0, 100);
+		getContentPane().add(uploadProgress, myConstraints);
+		myConstraints.gridy++;
+		
+		myConstraints.gridwidth = 1;
+		startLabel = new JLabel("First Upload");
+		getContentPane().add(startLabel, myConstraints);
+		myConstraints.gridx++;
+		statusLabel = new JLabel("Status: Not started");
+		getContentPane().add(statusLabel, myConstraints);
+		myConstraints.gridx++;
+		endLabel = new JLabel("Last Upload");
+		getContentPane().add(endLabel, myConstraints);
+		myConstraints.gridy++;
+		myConstraints.gridx = 0;
+		
+		myConstraints.gridwidth = 3;
+		pauseButton = new JButton("Pause Collection");
 		pauseButton.addActionListener(this);
 		getContentPane().add(pauseButton, myConstraints);
 		myConstraints.gridwidth = 1;
@@ -561,5 +591,36 @@ public class TaskInputGUI extends JFrame implements ActionListener
 		}
 		
 		refreshView();
+	}
+
+	@Override
+	public void updateProgress(long dataUploaded, long dataLeft, String currentStatus)
+	{
+		long totalData = dataUploaded + dataLeft;
+		double progress = dataUploaded / totalData;
+		int asPercent = (int) Math.round(progress * 100);
+		uploadTitle.setText("Upload Progress: " + asPercent + "%");
+		uploadProgress.setValue(asPercent);
+		startLabel.setText("Uploaded: " + dataUploaded);
+		endLabel.setText("Remaining: " + dataLeft);
+		statusLabel.setText("Status: " + currentStatus);
+	}
+	
+	@Override
+	public void updateProgress(long dataUploaded, long dataLeft)
+	{
+		long totalData = dataUploaded + dataLeft;
+		double progress = (double)dataUploaded / (double)totalData;
+		int asPercent = (int) Math.round(progress * 100);
+		uploadTitle.setText("Upload Progress: " + asPercent + "% of " + totalData + " data points uploaded");
+		uploadProgress.setValue(asPercent);
+		startLabel.setText("Uploaded: " + dataUploaded);
+		endLabel.setText("Remaining: " + dataLeft);
+	}
+	
+	@Override
+	public void updateStatus(String currentStatus)
+	{
+		statusLabel.setText("Status: " + currentStatus);
 	}
 }

@@ -34,6 +34,130 @@ import com.datacollectorlocal.TestingConnectionSource;
 
 public class DataAggregator implements Runnable
 {
+	private ArrayList<UploadProgressListener> progressListeners = new ArrayList<UploadProgressListener>();
+	
+	public void addProgressListener(UploadProgressListener toAdd)
+	{
+		progressListeners.add(toAdd);
+		
+		if(myChecker == null)
+		{
+			myChecker = new UploadProgressChecker();
+			checkerThread = new Thread(myChecker);
+			checkerThread.start();
+		}
+	}
+	
+	private Thread checkerThread;
+	private UploadProgressChecker myChecker = null;
+	private class UploadProgressChecker implements Runnable
+	{
+		private String sentItems = "SELECT (SELECT count(1) from `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`MouseInput` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`PerformanceMetrics` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`Process` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`ProcessArgs` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`ProcessAttributes` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`ProcessThreads` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`Screenshot` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`Task` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`TaskEvent` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`Window` WHERE `insertTimestamp` <= ?) + (SELECT count(1) from `dataCollection`.`WindowDetails` WHERE `insertTimestamp` <= ?) as totalRows";
+		private String remainingItems = "SELECT (SELECT count(1) from `dataCollection`.`KeyboardInput` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`MouseInput` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`PerformanceMetrics` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`Process` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`ProcessArgs` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`ProcessAttributes` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`ProcessThreads` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`Screenshot` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`Task` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`TaskEvent` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`Window` WHERE `insertTimestamp` > ?) + (SELECT count(1) from `dataCollection`.`WindowDetails` WHERE `insertTimestamp` > ?) as totalRows";
+		private String getLastSubmit = "SELECT `lastTransfer` FROM `dataCollection`.`LastTransfer` ORDER BY `lastTransfer` DESC LIMIT 1";
+		private boolean doACheck = false;
+		private int interval = 10000;
+		public void trigger()
+		{
+			doACheck = true;
+		}
+		public void run()
+		{
+			Connection myConnection = myConnectionSource.getDatabaseConnection();
+			while(running)
+			{
+				if(true)
+					return;
+				if(doACheck)
+				{
+					doACheck = false;
+					try
+					{
+						PreparedStatement lastSubmitStmt = myConnection.prepareStatement(getLastSubmit);
+						ResultSet lastSubmitResults = lastSubmitStmt.executeQuery();
+						Timestamp initTimestamp = null;
+						if(!lastSubmitResults.first())
+						{
+							lastSubmitResults.close();
+							lastSubmitStmt.close();
+							continue;
+						}
+						else
+						{
+							if(lastSubmitResults.getObject(1) instanceof Timestamp)
+							{
+								initTimestamp = lastSubmitResults.getTimestamp(1);
+							}
+							else
+							{
+								System.out.println("Weird timestamp behavior");
+								lastSubmitResults.close();
+								lastSubmitStmt.close();
+								continue;
+							}
+						}
+						
+						lastSubmitResults.close();
+						lastSubmitStmt.close();
+						
+						PreparedStatement sentStmt = myConnection.prepareStatement(sentItems);
+						
+						for(int x = 0; x < 12; x++)
+						{
+							sentStmt.setTimestamp(x + 1, initTimestamp);
+						}
+						
+						ResultSet sentResults = sentStmt.executeQuery();
+						long sent = 0;
+						
+						ResultSet myResults = sentResults;
+						if(myResults.next())
+						{
+							sent = myResults.getLong("totalRows");
+						}
+						sentResults.close();
+						sentStmt.close();
+						
+						
+						PreparedStatement remainingStmt = myConnection.prepareStatement(remainingItems);
+						
+						for(int x = 0; x < 12; x++)
+						{
+							remainingStmt.setTimestamp(x + 1, initTimestamp);
+						}
+						
+						
+						ResultSet remainingResults = remainingStmt.executeQuery();
+						long remaining = 0;
+						myResults = remainingResults;
+						if(myResults.next())
+						{
+							remaining = myResults.getLong("totalRows");
+						}
+						remainingStmt.close();
+						remainingResults.close();
+						
+						for(int x = 0; x < progressListeners.size(); x++)
+						{
+							progressListeners.get(x).updateProgress(sent, remaining);
+						}
+					}
+					catch(Exception e)
+					{
+						e.printStackTrace();
+					}
+				}
+				try
+				{
+					Thread.currentThread().sleep(interval);
+				}
+				catch(InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 	private static ConcurrentHashMap curAggregators = new ConcurrentHashMap();
 	private TestingConnectionSource myConnectionSource;
 	private boolean running = false;
@@ -842,11 +966,30 @@ public class DataAggregator implements Runnable
 					}
 					
 					lastFreeMemory = curFreeMemory;
+					
+					if(myChecker != null)
+					{
+						myChecker.trigger();
+					}
+					
+					for(int x = 0; x < progressListeners.size(); x++)
+					{
+						progressListeners.get(x).updateStatus("Upload progress OK");
+					}
+					
 				}
 				else
 				{
 					System.out.println("Not OK:");
 					System.out.println(responseString);
+					
+					
+					for(int x = 0; x < progressListeners.size(); x++)
+					{
+						
+						progressListeners.get(x).updateStatus("Upload error, see log");
+					}
+					
 					if(mySender.isClosing())
 					{
 						mySender.closeBlocking();
