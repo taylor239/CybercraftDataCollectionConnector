@@ -16,6 +16,13 @@ public class WebsocketDataSender extends WebSocketClient
 	
 	public long maxTimeout = 50000000;
 	
+	private long maxPacket = Long.MAX_VALUE;
+	public long getMaxPacket()
+	{
+		return maxPacket;
+	}
+	
+	
 	public static void main(String[] args)
 	{
 		try
@@ -37,6 +44,47 @@ public class WebsocketDataSender extends WebSocketClient
 			connectBlocking();
 		}
 		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		
+		System.out.println("Waiting for max packet length...");
+		long curTime = 0;
+		while(!hasResponse)
+		{
+			try
+			{
+				Thread.currentThread().sleep(poll);
+			}
+			catch(InterruptedException e)
+			{
+				e.printStackTrace();
+			}
+			curTime += poll;
+			System.out.println("Currently at " + curTime);
+			System.out.println(isOpen());
+			if(curTime > timeout || !isOpen())
+			{
+				System.out.println("Timeout: " + timeout);
+				try
+				{
+					closeBlocking();
+				}
+				catch(InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+				break;
+			}
+		}
+		System.out.println("Max packet: " + response);
+		System.out.println("Response in " + curTime);
+		
+		try
+		{
+			maxPacket = Long.parseLong(response);
+		}
+		catch(Exception e)
 		{
 			e.printStackTrace();
 		}
@@ -91,8 +139,8 @@ public class WebsocketDataSender extends WebSocketClient
 	}
 
 	@Override
-	public void onMessage(String arg0) {
-		// TODO Auto-generated method stub
+	public void onMessage(String arg0)
+	{
 		hasResponse = true;
 		response = arg0;
 		System.out.println("Client got " + arg0);
@@ -100,8 +148,8 @@ public class WebsocketDataSender extends WebSocketClient
 	}
 
 	@Override
-	public void onOpen(ServerHandshake arg0) {
-		// TODO Auto-generated method stub
+	public void onOpen(ServerHandshake arg0)
+	{
 		
 	}
 	

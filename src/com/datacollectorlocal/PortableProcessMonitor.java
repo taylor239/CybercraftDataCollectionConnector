@@ -131,6 +131,12 @@ public class PortableProcessMonitor implements Runnable
 				//curThreadMap.put("PID", curThread.getOwningProcessId());
 				curThreadMap.put("TSTATE", curThread.getState());
 				curThreadMap.put("T%CPU", 100d * (curThread.getKernelTime() + curThread.getUserTime()) / curThread.getUpTime());
+				if(!(curThreadMap.get("T%CPU") instanceof Double))
+				{
+					System.out.println("Weird data: " + curThreadMap.get("T%CPU"));
+					System.out.println("From: " + myReturn);
+					curThreadMap.put("T%CPU", 0d);
+				}
 				curThreadMap.put("MINORFAULT", curThread.getMinorFaults());
 				curThreadMap.put("MAJORFAULT", curThread.getMajorFaults());
 				curThreadMap.put("TSTART", curThread.getStartTime());
@@ -248,6 +254,12 @@ public class PortableProcessMonitor implements Runnable
 				//curThreadMap.put("PID", curThread.getOwningProcessId());
 				curThreadMap.put("TSTATE", curThread.getState());
 				curThreadMap.put("T%CPU", 100d * (curThread.getKernelTime() + curThread.getUserTime()) / curThread.getUpTime());
+				if(!(curThreadMap.get("T%CPU") instanceof Double))
+				{
+					System.out.println("Weird data: " + curThreadMap.get("T%CPU"));
+					System.out.println("From: " + myReturn);
+					curThreadMap.put("T%CPU", 0d);
+				}
 				curThreadMap.put("MINORFAULT", curThread.getMinorFaults());
 				curThreadMap.put("MAJORFAULT", curThread.getMajorFaults());
 				curThreadMap.put("TSTART", curThread.getStartTime());

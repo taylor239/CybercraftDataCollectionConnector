@@ -180,6 +180,8 @@ public class DataAggregator implements Runnable
 	private long maxDiffCeiling = 600000000;
 	private long maxDiffFloor = 600;
 	
+	private long maxByteLength = 68000000;
+	
 	private boolean sendMoreSessionNames = true;
 	
 	public void setSendMoreSessionNames(boolean toSend)
@@ -388,63 +390,14 @@ public class DataAggregator implements Runnable
 					}
 				}
 				
-				//PreparedStatement maxStatement = myConnection.prepareStatement(initSelectScreenshotSizeLimit);
-				//maxStatement.setTimestamp(2, initTimestamp);
-				//maxStatement.setTimestamp(1, maxMax);
-				//ResultSet maxResult = maxStatement.executeQuery();
-				//maxResult.next();
-				//totalToDo = maxResult.getInt(1);
-				
-				//System.out.println("Checking images from after " + initTimestamp);
-				
-				//PreparedStatement screenshotSizeStatement = myConnection.prepareStatement(selectScreenshotSizeLimit);
-				//screenshotSizeStatement.setTimestamp(1, initTimestamp);
-				//ResultSet screenshotSizeResults = screenshotSizeStatement.executeQuery();
-				//long curSize = 0;
 				Timestamp maxTime = null;
-				/*
-				while(screenshotSizeResults.next())
-				{
-					long entrySize = screenshotSizeResults.getLong(1);
-					if(curSize + entrySize <= maxMessageSize)
-					{
-						curSize += entrySize;
-						currentDone++;
-					}
-					else
-					{
-						maxTime = screenshotSizeResults.getTimestamp(2);
-						shouldPause = false;
-						break;
-					}
-				}
-				*/
-				//PreparedStatement myStmt = null;
+				
 				PreparedStatement maxStatement = preConnection.prepareStatement(currentTimeQuery);
 				ResultSet maxResult = maxStatement.executeQuery();
 				maxResult.next();
 				maxTime = maxResult.getTimestamp(1);
-				//if(maxTime == null)
-				//{
-				//	myStmt = myConnection.prepareStatement(transferTimeSelect);
-				//	ResultSet myResults = myStmt.executeQuery();
-					
-					//maxTime = new Timestamp(System.currentTimeMillis());
-				//	if(myResults.next())
-				//	{
-				//		maxTime = myResults.getTimestamp(1);
-				//	}
-					//System.out.println("Putting data up until now");
-					//myStmt = myConnection.prepareStatement(transferTimeInsertDefault);
-					//myStmt.execute();
-				//}
-				//else
-				//{
-					//System.out.println("Putting data up until " + maxTime);
-					//myStmt = myConnection.prepareStatement(transferTimeInsert);
-					//myStmt.setTimestamp(1, maxTime);
-					//myStmt.execute();
-				//}
+				
+				
 				PreparedStatement myStmt = myConnection.prepareStatement(transferTimeSelect);
 				ResultSet myResults = myStmt.executeQuery();
 				//myResults.next();
@@ -498,10 +451,6 @@ public class DataAggregator implements Runnable
 				totalObjects.put("admin", myAdminEmail);
 				
 				
-				//System.out.println("User send vars:");
-				//System.out.println("Send more: " + sendMoreSessionNames);
-				//System.out.println("Sent first: " + sentFirst);
-				//System.out.println("Sent one last: " + sendOneLastSession);
 				if(sendOneLastSession)
 				{
 					myStmt = myConnection.prepareStatement(userSelect);
@@ -789,40 +738,27 @@ public class DataAggregator implements Runnable
 				//System.out.println(windowJSON);
 				
 				String totalJSON = gson.toJson(totalObjects);
-				//System.out.println("Total: " + totalJSON);
-				//Writer tmpFile = new FileWriter("/home/osboxes/Desktop/empty.txt");
-				//tmpFile.write(totalJSON);
-				//tmpFile.close();
-				ByteArrayOutputStream output = new ByteArrayOutputStream();
-				GZIPOutputStream gzip = new GZIPOutputStream(output);
-				gzip.write(totalJSON.getBytes());
-				gzip.close();
-				byte[] compressed = output.toByteArray();
+				boolean sendTheData = true;
+				long dataSize = totalJSON.length() * 4;
+				if(dataSize > maxByteLength || totalObjectCount == 0)
+				{
+					if(dataSize > maxByteLength)
+					{
+						System.out.println("Not sending due to data size: " + dataSize);
+					}
+					sendTheData = false;
+				}
 				
-				String compressedString = new String(Base64.getEncoder().encode(compressed));
-				//compressed = Base64.getDecoder().decode(compressedString);
-				
-				//ByteArrayInputStream input = new ByteArrayInputStream(compressed);
-				//GZIPInputStream ungzip = new GZIPInputStream(input);
-				//output = new ByteArrayOutputStream();
-				//byte[] buffer = new byte[1024];
-				//int length = 0;
-				//while((length = ungzip.read(buffer)) > 0)
-				//{
-				//	output.write(buffer, 0, length);
-				//}
-				//ungzip.close();
-				//byte[] uncompressed = output.toByteArray();
-				
-				//System.out.println(((double)(totalJSON.length())) / 1000000.0);
-				//System.out.println(((double)(compressed.length)) / 1000000.0);
-				//System.out.println(((double)(compressedString.length())) / 1000000.0);
-				//System.out.println(((double)(uncompressed.length)) / 1000000.0);
-				
-				//String uncompressedString = new String(uncompressed);
-				//System.out.println(uncompressedString.equals(totalJSON));
-				
-				//System.out.println(compressedString.substring(0, 25));
+				String compressedString = null;
+				if(sendTheData)
+				{
+					ByteArrayOutputStream output = new ByteArrayOutputStream();
+					GZIPOutputStream gzip = new GZIPOutputStream(output);
+					gzip.write(totalJSON.getBytes());
+					gzip.close();
+					byte[] compressed = output.toByteArray();
+					compressedString = new String(Base64.getEncoder().encode(compressed));
+				}
 				
 				System.out.println("Sending to: " + server);
 				
@@ -839,6 +775,7 @@ public class DataAggregator implements Runnable
 							mySender.closeBlocking();
 						}
 						mySender = new WebsocketDataSender(new URI(server));
+						maxByteLength = mySender.getMaxPacket();
 						
 						if(!mySender.isOpen())
 						{
@@ -850,14 +787,29 @@ public class DataAggregator implements Runnable
 				}
 				
 				double sendStart = System.currentTimeMillis();
-				String responseString = mySender.sendWait(compressedString);
+				
+				String responseString = null;
+				if(sendTheData)
+				{
+					responseString = mySender.sendWait(compressedString);
+				}
+				
 				double sendTime = System.currentTimeMillis() - sendStart;
 				
-				double uploadRate = (double) compressedString.length() / (sendTime / 1000);
+				double uploadRate = 0;
+				if(sendTheData)
+				{
+					uploadRate = (double) compressedString.length() / (sendTime / 1000);
+				}
 				
 				double maxUploadTime = 100000;
 				
 				double headroom = 1 - (sendTime / maxUploadTime);
+				double headroom2 = 1 - (dataSize / (maxByteLength));
+				if(headroom2 < headroom)
+				{
+					headroom = headroom2;
+				}
 				System.out.println("Upload time: " + sendTime);
 				System.out.println("Headroom: " + (headroom));
 				
@@ -872,6 +824,7 @@ public class DataAggregator implements Runnable
 							mySender.closeBlocking();
 						}
 						mySender = new WebsocketDataSender(new URI(server));
+						maxByteLength = mySender.getMaxPacket();
 						
 						if(!mySender.isOpen())
 						{
@@ -882,22 +835,11 @@ public class DataAggregator implements Runnable
 					//Thread.currentThread().sleep(2500);
 				}
 				
-				/*
-				HttpClient httpclient = HttpClients.createDefault();
-				HttpPost httppost = new HttpPost(server);
-				List<NameValuePair> params = new ArrayList<NameValuePair>(1);
-				params.add(new BasicNameValuePair("uploadData", compressedString));
-				httppost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-				HttpResponse response = httpclient.execute(httppost);
-				HttpEntity entity = response.getEntity();
-				System.out.println("Sent " + compressedString.length());
 				
-				String responseString = EntityUtils.toString(entity, "UTF-8");
-				*/
 				
 				boolean isIdle = false;
 				
-				if (totalObjectCount == 0)
+				if(totalObjectCount == 0)
 				{
 					isIdle = true;
 					System.out.println("Nothing, fast forward to:");
@@ -921,6 +863,11 @@ public class DataAggregator implements Runnable
 					}
 					System.out.println(maxTime);
 					earliestStmt.close();
+					
+					
+					myStmt = myConnection.prepareStatement(transferTimeInsert);
+					myStmt.setTimestamp(1, maxTime);
+					myStmt.execute();
 				}
 				
 				if(responseString != null && responseString.equals("{\"result\":\"ok\"}"))
@@ -956,24 +903,24 @@ public class DataAggregator implements Runnable
 					
 					long curFreeMemory = freeMemory();
 					long lastSendAllocation = lastFreeMemory - curFreeMemory;
-					long dataSize = totalJSON.length() * 16;
 					
 					System.out.println("Available memory: " + curFreeMemory);
 					
-					if(((3 * lastSendAllocation) < (curFreeMemory)) && ((dataSize) < curFreeMemory))
+					if((((3 * lastSendAllocation) < (curFreeMemory)) && ((dataSize) < curFreeMemory)) || headroom < 0)
 					{
 						//If we have enough memory space then we multiply by the
 						//increment.  The increment is 2 multiplied by the amount
 						//of headroom.  Headroom is the amount of time it takes
 						//to transmit the last upload as a portion of the max
-						//time before hitting a timeout.  All of this makes
+						//time before hitting a timeout, or the amount of data
+						//sent as a portion of the max data size.  All of this makes
 						//messages the maximal size before hitting memory or
-						//timeout limits.
+						//timeout or size limits.
 						maxDiff *= (2 * headroom);
 					}
 					else
 					{
-						System.out.println("Not increasing due to memory limit.");
+						System.out.println("Not increasing due to memory and/or packet limit.");
 					}
 					
 					lastFreeMemory = curFreeMemory;
@@ -985,7 +932,11 @@ public class DataAggregator implements Runnable
 					
 					for(int x = 0; x < progressListeners.size(); x++)
 					{
-						if(isIdle)
+						if(!sendTheData)
+						{
+							progressListeners.get(x).updateStatus("Max upload size reached, throttling...");
+						}
+						else if(isIdle)
 						{
 							progressListeners.get(x).updateStatus("Searching for new data...");
 						}
@@ -998,19 +949,29 @@ public class DataAggregator implements Runnable
 				}
 				else
 				{
-					System.out.println("Not OK:");
-					System.out.println(responseString);
-					
+					if(!sendTheData)
+					{
+						System.out.println("Local throttle");
+					}
+					else
+					{
+						System.out.println("Not OK:");
+						System.out.println(responseString);
+					}
 					
 					for(int x = 0; x < progressListeners.size(); x++)
 					{
 						if(isIdle)
 						{
-							progressListeners.get(x).updateStatus("Upload complete");
+							progressListeners.get(x).updateStatus("Searching for new data...");
 						}
 						else
 						{
-							if(responseString == null)
+							if(!sendTheData)
+							{
+								progressListeners.get(x).updateStatus("Max upload size reached, throttling...");
+							}
+							else if(responseString == null)
 							{
 								progressListeners.get(x).updateStatus("Upload timeout, throttling speed");
 							}
@@ -1032,9 +993,13 @@ public class DataAggregator implements Runnable
 							mySender.closeBlocking();
 						}
 						mySender = new WebsocketDataSender(new URI(server));
+						maxByteLength = mySender.getMaxPacket();
 					}
 					shouldPause = true;
-					maxDiff /= 3L;
+					if(totalObjectCount != 0)
+					{
+						maxDiff /= 3L;
+					}
 				}
 				
 				System.out.println("Cur max diff: " + maxDiff);
@@ -1123,10 +1088,12 @@ public class DataAggregator implements Runnable
 			{
 				e.printStackTrace();
 			}
-			try {
+			try
+			{
 				myConnection.close();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
+			}
+			catch(SQLException e)
+			{
 				e.printStackTrace();
 			}
 			
