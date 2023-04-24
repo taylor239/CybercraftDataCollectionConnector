@@ -721,6 +721,14 @@ public class Start implements NativeMouseInputListener, NativeKeyListener, Runna
 		{
 			return;
 		}
+		if(myProcessMonitor != null)
+		{
+			myProcessMonitor.interruptSleepMonitor();
+		}
+		//if(myGenerator != null)
+		//{
+		//	myGenerator.interruptSleepScreenshot();
+		//}
 		if(myMonitor != null)
 		{
 			myMonitor.interruptSleep(diff);

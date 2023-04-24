@@ -70,6 +70,14 @@ public class PortableProcessMonitor implements Runnable
 		os = si.getOperatingSystem();
 	}
 	
+	public void interruptSleepMonitor()
+	{
+		if(myThread.getState() == Thread.State.WAITING || myThread.getState() == Thread.State.TIMED_WAITING)
+		{
+			myThread.interrupt();
+		}
+	}
+	
 	public HashMap getProcessInfo(int pid)
 	{
 		HashMap toReturn = null;
